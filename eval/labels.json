@@ -1,0 +1,37 @@
+{
+  "clean-pkg@1.0.0": {
+    "groundTruth": "benign",
+    "expectedVerdict": "Safe",
+    "notes": "Completely benign package"
+  },
+  "benign-tool@1.0.0": {
+    "groundTruth": "benign",
+    "expectedVerdict": "Safe",
+    "notes": "Hard negative legitimately using child_process and process.env without exfiltration"
+  },
+  "event-stream-lite@1.0.0": {
+    "groundTruth": "benign",
+    "expectedVerdict": "Safe",
+    "notes": "Clean original stream library"
+  },
+  "event-stream-lite@1.0.1": {
+    "groundTruth": "malicious",
+    "expectedVerdict": "Block",
+    "notes": "Injected postinstall script with obfuscated payload exfiltrating env to exfil.invalid"
+  },
+  "vulnerable-pkg@1.0.0": {
+    "groundTruth": "malicious",
+    "expectedVerdict": "Block",
+    "notes": "Known critical vulnerability in OSV advisory"
+  },
+  "lodahs@1.0.0": {
+    "groundTruth": "malicious",
+    "expectedVerdict": "Review",
+    "notes": "Typosquat of lodash with install script and recent publish time"
+  },
+  "tampered-pkg@1.0.0": {
+    "groundTruth": "malicious",
+    "expectedVerdict": "Block",
+    "notes": "Cryptographic digest mismatch between served tarball and registry"
+  }
+}
