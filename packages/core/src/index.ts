@@ -115,3 +115,105 @@ export async function scanPackage(ctx: ScanContext, options: ScanOptions = {}): 
 
   return finalReport;
 }
+
+export interface ScanFromRegistryOptions {
+  registryUrl?: string;
+  trustedPublicKeys?: Record<string, string>;
+  osvClient?: import('./clients/osv-client.js').OsvClient;
+  policy?: import('./engine/policy-engine.js').GuardPolicy;
+}
+
+export async function scanFromRegistry(
+  packageName: string,
+  version: string,
+  options: ScanFromRegistryOptions = {},
+): Promise<Report> {
+  const registryUrl = options.registryUrl || 'https://registry.npmjs.org';
+  const client = new RegistryClient(registryUrl);
+
+  // 1. Fetch package metadata
+  const doc = await client.getPackageDocument(packageName);
+  const targetVersionDoc = doc.versions?.[version];
+  if (!targetVersionDoc) {
+    throw new Error(`Version ${version} of package ${packageName} not found in registry`);
+  }
+
+  // 2. Resolve tarball URL and download target version tarball
+  let tarballUrl = targetVersionDoc.dist?.tarball;
+  if (!tarballUrl) {
+    throw new Error(`Tarball URL missing for ${packageName}@${version} in registry document`);
+  }
+  // If registryUrl is custom (e.g. fake registry), normalize relative or host-swapped tarball URL
+  if (options.registryUrl && tarballUrl.startsWith('http://127.0.0.1:4000/')) {
+    tarballUrl = tarballUrl.replace('http://127.0.0.1:4000', options.registryUrl.replace(/\/$/, ''));
+  }
+
+  const tarballBytes = await client.downloadTarball(tarballUrl);
+
+  // 3. Find previous version by publish time (if available in doc.time)
+  let previousVersion: string | undefined;
+  if (doc.time) {
+    const targetPublishTime = doc.time[version] ? new Date(doc.time[version]).getTime() : Infinity;
+    // Collect earlier published versions
+    const earlierVersions: Array<{ version: string; time: number }> = [];
+    for (const [v, timeStr] of Object.entries(doc.time)) {
+      if (['created', 'modified'].includes(v)) continue;
+      if (v === version) continue;
+      if (doc.versions?.[v]) {
+        const t = new Date(timeStr).getTime();
+        if (t <= targetPublishTime) {
+          earlierVersions.push({ version: v, time: t });
+        }
+      }
+    }
+    earlierVersions.sort((a, b) => b.time - a.time);
+    if (earlierVersions.length > 0) {
+      previousVersion = earlierVersions[0].version;
+    }
+  }
+
+  let previousVersionTarballBytes: Buffer | undefined;
+  let previousVersionMetadata: Record<string, unknown> | undefined;
+
+  if (previousVersion && doc.versions?.[previousVersion]) {
+    const prevDoc = doc.versions[previousVersion];
+    let prevTarballUrl = prevDoc.dist?.tarball;
+    if (prevTarballUrl) {
+      if (options.registryUrl && prevTarballUrl.startsWith('http://127.0.0.1:4000/')) {
+        prevTarballUrl = prevTarballUrl.replace('http://127.0.0.1:4000', options.registryUrl.replace(/\/$/, ''));
+      }
+      try {
+        previousVersionTarballBytes = await client.downloadTarball(prevTarballUrl);
+        previousVersionMetadata = {
+          name: packageName,
+          maintainers: prevDoc.maintainers || doc.maintainers,
+          versions: {
+            [previousVersion]: prevDoc,
+          },
+        };
+      } catch {
+        // If previous version download fails, skip diff gracefully
+        previousVersionTarballBytes = undefined;
+        previousVersionMetadata = undefined;
+      }
+    }
+  }
+
+  const scanCtx: ScanContext = {
+    packageName,
+    ecosystem: 'npm',
+    version,
+    registryUrl,
+    tarballBytes,
+    registryMetadata: doc as unknown as Record<string, unknown>,
+    previousVersionTarballBytes,
+    previousVersionMetadata,
+  };
+
+  return scanPackage(scanCtx, {
+    trustedPublicKeys: options.trustedPublicKeys,
+    osvClient: options.osvClient,
+    policy: options.policy,
+  });
+}
+
