@@ -1,0 +1,14 @@
+{
+  "name": "@packageguard/eval",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -b",
+    "benchmark": "tsx src/run-benchmark.ts",
+    "demo": "tsx src/demo.ts"
+  },
+  "dependencies": {
+    "@packageguard/core": "*",
+    "tsx": "^4.19.2"
+  }
+}
