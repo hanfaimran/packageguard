@@ -143,15 +143,20 @@ export class VersionDiffScanner implements Scanner {
 
     // 6. Run StaticAnalyzer on ADDED/CHANGED files only
     if (changedOrAddedFiles.length > 0) {
+      const addedPaths = new Set(
+        changedOrAddedFiles.filter((f) => !prevFileMap.has(f.path)).map((f) => f.path),
+      );
       const staticDiffEvidence = this.staticAnalyzer.analyzeFiles(changedOrAddedFiles, ctx);
       for (const ev of staticDiffEvidence) {
-        // Tag as version-diff category with enriched description
+        const fileRef = ev.location?.file || 'file';
+        const isAdded = addedPaths.has(fileRef);
+        const prefix = isAdded ? `new file ${fileRef} in ${ctx.version}` : `modified file ${fileRef} in ${ctx.version}`;
         evidence.push({
           ...ev,
           id: `diff-${ev.id}`,
           scanner: this.name,
           category: 'version-diff',
-          description: `[In added/modified file] ${ev.description}`,
+          description: `${prefix} contains ${ev.description.toLowerCase().replace(/^(correlated credential exfiltration pattern detected inside lifecycle install script \([^)]+\): |multiple suspicious signals in [^:]+: )/, '')}`,
         });
       }
     }
