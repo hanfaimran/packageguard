@@ -1,0 +1,115 @@
+{
+  "total": 8,
+  "truePositives": 3,
+  "falsePositives": 0,
+  "trueNegatives": 5,
+  "falseNegatives": 0,
+  "precision": 1,
+  "recall": 1,
+  "f1": 1,
+  "detectionRate": 1,
+  "falsePositiveRate": 0,
+  "vulnerablePackages": [
+    {
+      "package": "vulnerable-pkg",
+      "version": "1.0.0",
+      "category": "vulnerable",
+      "verdict": "Block",
+      "riskScore": 60,
+      "verificationStatus": "PartiallyVerified",
+      "expectedVerdict": "Review"
+    }
+  ],
+  "perPackage": [
+    {
+      "package": "clean-pkg",
+      "version": "1.0.0",
+      "category": "benign",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 100,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "benign-tool",
+      "version": "1.0.0",
+      "category": "benign",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 93,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "benign-base64",
+      "version": "1.0.0",
+      "category": "benign",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 96,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "benign-native-postinstall",
+      "version": "1.0.0",
+      "category": "benign",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 89,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "event-stream-lite",
+      "version": "1.0.0",
+      "category": "benign",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 95,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "event-stream-lite",
+      "version": "1.0.1",
+      "category": "malicious",
+      "groundTruth": "malicious",
+      "verdict": "Block",
+      "riskScore": 34,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TP"
+    },
+    {
+      "package": "vulnerable-pkg",
+      "version": "1.0.0",
+      "category": "vulnerable",
+      "groundTruth": "malicious",
+      "verdict": "Block",
+      "riskScore": 60,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "N/A"
+    },
+    {
+      "package": "lodahs",
+      "version": "1.0.0",
+      "category": "typosquat",
+      "groundTruth": "malicious",
+      "verdict": "Review",
+      "riskScore": 65,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TP"
+    },
+    {
+      "package": "tampered-pkg",
+      "version": "1.0.0",
+      "category": "tampered",
+      "groundTruth": "malicious",
+      "verdict": "Block",
+      "riskScore": 60,
+      "verificationStatus": "Unverified",
+      "classification": "TP"
+    }
+  ]
+}

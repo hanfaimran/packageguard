@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.turbo/
+*.log
+.env
+.env.local
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+
+*.d.ts.map
+*.js.map
