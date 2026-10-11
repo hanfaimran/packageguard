@@ -13,18 +13,40 @@ export interface FixtureSpec {
 }
 
 export function buildTarball(files: Record<string, string>): Buffer {
-  const pack = tar.pack();
-  const chunks: Buffer[] = [];
-  pack.on('data', (chunk: any) => {
-    chunks.push(Buffer.from(chunk));
-  });
-  for (const [name, content] of Object.entries(files)) {
-    pack.entry({ name: `package/${name}` }, content);
-  }
-  pack.finalize();
-  return zlib.gzipSync(Buffer.concat(chunks));
-}
+  const blocks: Buffer[] = [];
 
+  const writeString = (buf: Buffer, str: string, offset: number, length: number): void => {
+    buf.write(str.slice(0, length), offset, 'utf-8');
+  };
+
+  for (const [name, content] of Object.entries(files)) {
+    const body = Buffer.from(content, 'utf-8');
+    const header = Buffer.alloc(512, 0);
+    const fullName = `package/${name}`;
+
+    writeString(header, fullName, 0, 100);
+    writeString(header, '0000644\0', 100, 8);
+    writeString(header, '0000000\0', 108, 8);
+    writeString(header, '0000000\0', 116, 8);
+    writeString(header, body.length.toString(8).padStart(11, '0') + '\0', 124, 12);
+    writeString(header, Math.floor(Date.now() / 1000).toString(8).padStart(11, '0') + '\0', 136, 12);
+    header.fill(0x20, 148, 156); // checksum placeholder (spaces)
+    header.write('0', 156, 'ascii'); // typeflag: regular file
+    writeString(header, 'ustar\0', 257, 6);
+    writeString(header, '00', 263, 2);
+
+    let checksum = 0;
+    for (const byte of header) checksum += byte;
+    writeString(header, checksum.toString(8).padStart(6, '0') + '\0 ', 148, 8);
+
+    blocks.push(header, body);
+    const padding = (512 - (body.length % 512)) % 512;
+    if (padding > 0) blocks.push(Buffer.alloc(padding, 0));
+  }
+
+  blocks.push(Buffer.alloc(1024, 0)); // end-of-archive marker
+  return zlib.gzipSync(Buffer.concat(blocks));
+}
 export function computeSha512Integrity(bytes: Buffer): string {
   const hash = crypto.createHash('sha512').update(bytes).digest('base64');
   return `sha512-${hash}`;
