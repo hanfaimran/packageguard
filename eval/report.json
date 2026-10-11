@@ -1,0 +1,77 @@
+{
+  "total": 7,
+  "truePositives": 4,
+  "falsePositives": 0,
+  "trueNegatives": 3,
+  "falseNegatives": 0,
+  "precision": 1,
+  "recall": 1,
+  "f1": 1,
+  "detectionRate": 1,
+  "falsePositiveRate": 0,
+  "perPackage": [
+    {
+      "package": "clean-pkg",
+      "version": "1.0.0",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 100,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "benign-tool",
+      "version": "1.0.0",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 100,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "event-stream-lite",
+      "version": "1.0.0",
+      "groundTruth": "benign",
+      "verdict": "Safe",
+      "riskScore": 95,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TN"
+    },
+    {
+      "package": "event-stream-lite",
+      "version": "1.0.1",
+      "groundTruth": "malicious",
+      "verdict": "Review",
+      "riskScore": 68,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TP"
+    },
+    {
+      "package": "vulnerable-pkg",
+      "version": "1.0.0",
+      "groundTruth": "malicious",
+      "verdict": "Block",
+      "riskScore": 62,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TP"
+    },
+    {
+      "package": "lodahs",
+      "version": "1.0.0",
+      "groundTruth": "malicious",
+      "verdict": "Review",
+      "riskScore": 65,
+      "verificationStatus": "PartiallyVerified",
+      "classification": "TP"
+    },
+    {
+      "package": "tampered-pkg",
+      "version": "1.0.0",
+      "groundTruth": "malicious",
+      "verdict": "Block",
+      "riskScore": 60,
+      "verificationStatus": "Unverified",
+      "classification": "TP"
+    }
+  ]
+}

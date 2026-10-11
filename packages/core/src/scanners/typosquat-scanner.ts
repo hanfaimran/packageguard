@@ -156,7 +156,8 @@ export class TyposquatScanner implements Scanner {
         }
 
         if (ctx.registryMetadata?.time) {
-          const createdStr = ctx.registryMetadata.time.created;
+          const timeObj = ctx.registryMetadata.time as Record<string, string>;
+          const createdStr = timeObj.created;
           if (createdStr) {
             const ageDays = (Date.now() - new Date(createdStr).getTime()) / (1000 * 60 * 60 * 24);
             if (ageDays < 30) {

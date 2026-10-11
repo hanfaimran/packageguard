@@ -19,13 +19,11 @@ export function buildTarball(files: Record<string, string>): Buffer {
   }
   pack.finalize();
   const chunks: Buffer[] = [];
-  return new Promise((resolve) => {
-    pack.on('data', (c) => chunks.push(c));
-    pack.on('end', () => {
-      const tarBuf = Buffer.concat(chunks);
-      resolve(zlib.gzipSync(tarBuf));
-    });
-  }) as unknown as Buffer;
+  let chunk: any;
+  while ((chunk = pack.read()) !== null) {
+    chunks.push(Buffer.from(chunk));
+  }
+  return zlib.gzipSync(Buffer.concat(chunks));
 }
 
 export function computeSha512Integrity(bytes: Buffer): string {
@@ -222,7 +220,7 @@ export function generateAllFixtures(privateKeyPem: string): Record<string, Prepa
         '1.0.1': new Date().toISOString(),
       },
       versions: {
-        '1.0.0': fixtures['event-stream-lite@1.0.0'].packageDocument.versions['1.0.0'],
+        '1.0.0': (fixtures['event-stream-lite@1.0.0'].packageDocument as any).versions['1.0.0'],
         '1.0.1': {
           name: 'event-stream-lite',
           version: '1.0.1',

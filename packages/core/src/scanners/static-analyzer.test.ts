@@ -4,20 +4,20 @@ import { describe, it, expect } from 'vitest';
 import { StaticAnalyzer, calculateEntropy } from './static-analyzer.js';
 import type { ScanContext } from '../types.js';
 
-function createMockTarball(files: Record<string, string>): Buffer {
+async function createMockTarball(files: Record<string, string>): Promise<Buffer> {
   const pack = tar.pack();
   for (const [name, content] of Object.entries(files)) {
     pack.entry({ name: `package/${name}` }, content);
   }
   pack.finalize();
   const chunks: Buffer[] = [];
-  return new Promise((resolve) => {
-    pack.on('data', (c) => chunks.push(c));
+  return new Promise<Buffer>((resolve) => {
+    pack.on('data', (c: any) => chunks.push(Buffer.from(c)));
     pack.on('end', () => {
       const tarBuf = Buffer.concat(chunks);
       resolve(zlib.gzipSync(tarBuf));
     });
-  }) as unknown as Buffer;
+  });
 }
 
 describe('StaticAnalyzer & TarballExtractor', () => {

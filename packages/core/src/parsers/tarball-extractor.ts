@@ -34,7 +34,7 @@ export async function extractTarballInMemory(tarballBytes: Buffer): Promise<Extr
 
       if (header.type === 'file') {
         const chunks: Buffer[] = [];
-        stream.on('data', (chunk) => chunks.push(chunk));
+        stream.on('data', (chunk) => chunks.push(chunk as Buffer));
         stream.on('end', () => {
           const contentBuf = Buffer.concat(chunks);
           // Only read text files into content string if reasonable size
