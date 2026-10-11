@@ -20,14 +20,24 @@ export interface BenchmarkMetrics {
   f1: number;
   detectionRate: number;
   falsePositiveRate: number;
+  vulnerablePackages: Array<{
+    package: string;
+    version: string;
+    category: string;
+    verdict: string;
+    riskScore: number;
+    verificationStatus: string;
+    expectedVerdict: string;
+  }>;
   perPackage: Array<{
     package: string;
     version: string;
+    category: string;
     groundTruth: 'benign' | 'malicious';
     verdict: string;
     riskScore: number;
     verificationStatus: string;
-    classification: 'TP' | 'FP' | 'TN' | 'FN';
+    classification: 'TP' | 'FP' | 'TN' | 'FN' | 'N/A';
   }>;
 }
 
@@ -43,8 +53,10 @@ export async function runBenchmark(): Promise<BenchmarkMetrics> {
   const serverUrl = await server.start();
 
   const labelsRaw = fs.readFileSync(path.resolve(__dirname, '../labels.json'), 'utf-8');
-  const labels: Record<string, { groundTruth: 'benign' | 'malicious'; expectedVerdict: string }> =
-    JSON.parse(labelsRaw);
+  const labels: Record<
+    string,
+    { category?: string; groundTruth: 'benign' | 'malicious'; expectedVerdict: string }
+  > = JSON.parse(labelsRaw);
 
   // Mock OSV client to return vulnerability for vulnerable-pkg
   const mockOsvClient = {
@@ -68,6 +80,7 @@ export async function runBenchmark(): Promise<BenchmarkMetrics> {
   let tn = 0;
   let fn = 0;
   const perPackage: BenchmarkMetrics['perPackage'] = [];
+  const vulnerablePackages: BenchmarkMetrics['vulnerablePackages'] = [];
 
   try {
     for (const [key, meta] of Object.entries(labels)) {
@@ -99,20 +112,44 @@ export async function runBenchmark(): Promise<BenchmarkMetrics> {
         osvClient: mockOsvClient,
       });
 
-      // Binary classification mapping:
-      // Flagged as threat = Block or Review
-      // Benign pass = Safe
+      const category = meta.category || (meta.groundTruth === 'malicious' ? 'malicious' : 'benign');
+
+      if (category === 'vulnerable') {
+        vulnerablePackages.push({
+          package: name,
+          version,
+          category,
+          verdict: report.verdict,
+          riskScore: report.riskScore,
+          verificationStatus: report.verificationStatus,
+          expectedVerdict: meta.expectedVerdict,
+        });
+        perPackage.push({
+          package: name,
+          version,
+          category,
+          groundTruth: meta.groundTruth,
+          verdict: report.verdict,
+          riskScore: report.riskScore,
+          verificationStatus: report.verificationStatus,
+          classification: 'N/A',
+        });
+        continue;
+      }
+
+      // Positive class: malicious, typosquat, tampered
+      // Negative class: benign
+      const isPositiveClass = ['malicious', 'typosquat', 'tampered'].includes(category);
       const flagged = report.verdict === 'Block' || report.verdict === 'Review';
-      const actualMalicious = meta.groundTruth === 'malicious';
 
       let classification: 'TP' | 'FP' | 'TN' | 'FN';
-      if (actualMalicious && flagged) {
+      if (isPositiveClass && flagged) {
         classification = 'TP';
         tp++;
-      } else if (!actualMalicious && flagged) {
+      } else if (!isPositiveClass && flagged) {
         classification = 'FP';
         fp++;
-      } else if (!actualMalicious && !flagged) {
+      } else if (!isPositiveClass && !flagged) {
         classification = 'TN';
         tn++;
       } else {
@@ -123,6 +160,7 @@ export async function runBenchmark(): Promise<BenchmarkMetrics> {
       perPackage.push({
         package: name,
         version,
+        category,
         groundTruth: meta.groundTruth,
         verdict: report.verdict,
         riskScore: report.riskScore,
@@ -152,6 +190,7 @@ export async function runBenchmark(): Promise<BenchmarkMetrics> {
     f1,
     detectionRate,
     falsePositiveRate,
+    vulnerablePackages,
     perPackage,
   };
 
@@ -163,8 +202,8 @@ export async function runBenchmark(): Promise<BenchmarkMetrics> {
 
   const mdContent = `# PackageGuard Benchmark Evaluation Report
 
-## 1. Summary Metrics
-- **Total Evaluated Packages**: ${total}
+## 1. Summary Metrics (Threat Detection Class: Malicious, Typosquat, Tampered)
+- **Total Evaluated Packages (Binary Matrix)**: ${total}
 - **True Positives (TP)**: ${tp}
 - **False Positives (FP)**: ${fp}
 - **True Negatives (TN)**: ${tn}
@@ -174,17 +213,27 @@ export async function runBenchmark(): Promise<BenchmarkMetrics> {
 - **F1 Score**: ${f1.toFixed(3)}
 - **False Positive Rate (FPR)**: ${(falsePositiveRate * 100).toFixed(1)}%
 
-## 2. Per-Package Evaluation Matrix
-| Package | Version | Ground Truth | Verdict | Score | Verification | Classification |
+## 2. Vulnerability Assessment (Reported Separately)
+| Package | Version | Category | Verdict | Score | Verification | Expected Verdict |
 |---|---|---|---|---|---|---|
-${perPackage
+${vulnerablePackages
   .map(
-    (p) =>
-      `| ${p.package} | ${p.version} | ${p.groundTruth} | **${p.verdict}** | ${p.riskScore} | ${p.verificationStatus} | ${p.classification} |`,
+    (v) =>
+      `| ${v.package} | ${v.version} | ${v.category} | **${v.verdict}** | ${v.riskScore} | ${v.verificationStatus} | ${v.expectedVerdict} |`,
   )
   .join('\n')}
 
-## 3. Limitations & Real-World Caveats
+## 3. Per-Package Evaluation Matrix
+| Package | Version | Category | Ground Truth | Verdict | Score | Verification | Classification |
+|---|---|---|---|---|---|---|---|
+${perPackage
+  .map(
+    (p) =>
+      `| ${p.package} | ${p.version} | ${p.category} | ${p.groundTruth} | **${p.verdict}** | ${p.riskScore} | ${p.verificationStatus} | ${p.classification} |`,
+  )
+  .join('\n')}
+
+## 4. Limitations & Real-World Caveats
 > [!IMPORTANT]
 > **Evaluation Limitations Disclaimer**:
 > This benchmark operates against synthetic, defanged test fixtures engineered to model real-world attack vectors (e.g., event-stream supply chain injection, typosquatting, metadata manipulation, hash tampering, and known CVEs).

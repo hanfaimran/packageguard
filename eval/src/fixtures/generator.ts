@@ -14,15 +14,14 @@ export interface FixtureSpec {
 
 export function buildTarball(files: Record<string, string>): Buffer {
   const pack = tar.pack();
+  const chunks: Buffer[] = [];
+  pack.on('data', (chunk: any) => {
+    chunks.push(Buffer.from(chunk));
+  });
   for (const [name, content] of Object.entries(files)) {
     pack.entry({ name: `package/${name}` }, content);
   }
   pack.finalize();
-  const chunks: Buffer[] = [];
-  let chunk: any;
-  while ((chunk = pack.read()) !== null) {
-    chunks.push(Buffer.from(chunk));
-  }
   return zlib.gzipSync(Buffer.concat(chunks));
 }
 
@@ -340,6 +339,104 @@ export function generateAllFixtures(privateKeyPem: string): Record<string, Prepa
             integrity: expectedHash, // registry declares original digest
             signatures: [tamperedSig],
             tarball: 'http://127.0.0.1:4000/tampered-pkg/-/tampered-pkg-1.0.0.tgz',
+          },
+        },
+      },
+    },
+  };
+
+  // 8. benign-base64@1.0.0 (Hard negative legitimately decoding base64 data URLs / assets)
+  const benignBase64Files = {
+    'package.json': JSON.stringify({
+      name: 'benign-base64',
+      version: '1.0.0',
+      description: 'Utility that decodes base64 assets and data URIs',
+      main: 'index.js',
+    }),
+    'index.js': `
+      function decodeDataUrl(uri) {
+        // Legitimate base64 decoding without eval or network access
+        const b64Data = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        const buf = Buffer.from(b64Data, 'base64');
+        return buf.toString('utf-8');
+      }
+      module.exports = { decodeDataUrl };
+    `,
+  };
+  const b64Tarball = buildTarball(benignBase64Files);
+  const b64Integrity = computeSha512Integrity(b64Tarball);
+  const b64Sig = signMetadata('benign-base64', '1.0.0', b64Integrity, privateKeyPem);
+  fixtures['benign-base64@1.0.0'] = {
+    name: 'benign-base64',
+    version: '1.0.0',
+    tarballBytes: b64Tarball,
+    integrity: b64Integrity,
+    signatures: [b64Sig],
+    packageDocument: {
+      name: 'benign-base64',
+      repository: { type: 'git', url: 'https://github.com/example/benign-base64' },
+      maintainers: [{ name: 'art-dev' }],
+      time: { created: '2023-01-01T00:00:00.000Z', '1.0.0': '2023-01-01T00:00:00.000Z' },
+      versions: {
+        '1.0.0': {
+          name: 'benign-base64',
+          version: '1.0.0',
+          repository: { type: 'git', url: 'https://github.com/example/benign-base64' },
+          maintainers: [{ name: 'art-dev' }],
+          dist: {
+            integrity: b64Integrity,
+            signatures: [b64Sig],
+            tarball: 'http://127.0.0.1:4000/benign-base64/-/benign-base64-1.0.0.tgz',
+          },
+        },
+      },
+    },
+  };
+
+  // 9. benign-native-postinstall@1.0.0 (Hard negative with legitimate native compile notice / setup)
+  const benignNativeFiles = {
+    'package.json': JSON.stringify({
+      name: 'benign-native-postinstall',
+      version: '1.0.0',
+      description: 'Native module wrapper with build notice in postinstall',
+      main: 'index.js',
+      scripts: {
+        postinstall: 'node ./scripts/build-notice.js',
+      },
+    }),
+    'index.js': 'module.exports = { isSupported: true };\n',
+    'scripts/build-notice.js': `
+      // Legitimate postinstall compile check / message without exfiltration
+      console.log('Building native dependencies or checking prebuilt binary compatibility...');
+    `,
+  };
+  const nativeTarball = buildTarball(benignNativeFiles);
+  const nativeIntegrity = computeSha512Integrity(nativeTarball);
+  const nativeSig = signMetadata('benign-native-postinstall', '1.0.0', nativeIntegrity, privateKeyPem);
+  fixtures['benign-native-postinstall@1.0.0'] = {
+    name: 'benign-native-postinstall',
+    version: '1.0.0',
+    tarballBytes: nativeTarball,
+    integrity: nativeIntegrity,
+    signatures: [nativeSig],
+    packageDocument: {
+      name: 'benign-native-postinstall',
+      repository: { type: 'git', url: 'https://github.com/example/benign-native' },
+      maintainers: [{ name: 'native-dev' }],
+      time: { created: '2023-01-01T00:00:00.000Z', '1.0.0': '2023-01-01T00:00:00.000Z' },
+      versions: {
+        '1.0.0': {
+          name: 'benign-native-postinstall',
+          version: '1.0.0',
+          repository: { type: 'git', url: 'https://github.com/example/benign-native' },
+          maintainers: [{ name: 'native-dev' }],
+          scripts: {
+            postinstall: 'node ./scripts/build-notice.js',
+          },
+          dist: {
+            integrity: nativeIntegrity,
+            signatures: [nativeSig],
+            tarball: 'http://127.0.0.1:4000/benign-native-postinstall/-/benign-native-postinstall-1.0.0.tgz',
           },
         },
       },

@@ -1,35 +1,54 @@
 {
   "clean-pkg@1.0.0": {
+    "category": "benign",
     "groundTruth": "benign",
     "expectedVerdict": "Safe",
     "notes": "Completely benign package"
   },
   "benign-tool@1.0.0": {
+    "category": "benign",
     "groundTruth": "benign",
     "expectedVerdict": "Safe",
     "notes": "Hard negative legitimately using child_process and process.env without exfiltration"
   },
+  "benign-base64@1.0.0": {
+    "category": "benign",
+    "groundTruth": "benign",
+    "expectedVerdict": "Safe",
+    "notes": "Hard negative legitimately decoding base64 data URLs without exfiltration"
+  },
+  "benign-native-postinstall@1.0.0": {
+    "category": "benign",
+    "groundTruth": "benign",
+    "expectedVerdict": "Safe",
+    "notes": "Hard negative legitimately running build notice script in postinstall"
+  },
   "event-stream-lite@1.0.0": {
+    "category": "benign",
     "groundTruth": "benign",
     "expectedVerdict": "Safe",
     "notes": "Clean original stream library"
   },
   "event-stream-lite@1.0.1": {
+    "category": "malicious",
     "groundTruth": "malicious",
     "expectedVerdict": "Block",
     "notes": "Injected postinstall script with obfuscated payload exfiltrating env to exfil.invalid"
   },
   "vulnerable-pkg@1.0.0": {
+    "category": "vulnerable",
     "groundTruth": "malicious",
-    "expectedVerdict": "Block",
-    "notes": "Known critical vulnerability in OSV advisory"
+    "expectedVerdict": "Review",
+    "notes": "Known vulnerability in OSV advisory (reported separately)"
   },
   "lodahs@1.0.0": {
+    "category": "typosquat",
     "groundTruth": "malicious",
     "expectedVerdict": "Review",
     "notes": "Typosquat of lodash with install script and recent publish time"
   },
   "tampered-pkg@1.0.0": {
+    "category": "tampered",
     "groundTruth": "malicious",
     "expectedVerdict": "Block",
     "notes": "Cryptographic digest mismatch between served tarball and registry"
