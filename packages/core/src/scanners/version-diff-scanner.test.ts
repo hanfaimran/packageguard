@@ -88,7 +88,10 @@ describe('VersionDiffScanner', () => {
     expect(depEv).toBeDefined();
     expect(depEv?.description).toContain('flatmap-stream');
 
-    const staticDiffEv = evidence.find((e) => e.description.includes('[In added/modified file]'));
+    const staticDiffEv = evidence.find(
+      (e) => e.description.includes('scripts/postinstall.js') && e.location?.file === 'scripts/postinstall.js',
+    );
     expect(staticDiffEv).toBeDefined();
+    expect(staticDiffEv?.location?.line).toBeDefined();
   });
 });
