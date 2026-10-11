@@ -58,10 +58,13 @@ export class StaticAnalyzer implements Scanner {
     for (const [key, cmd] of Object.entries(scripts)) {
       if (['preinstall', 'install', 'postinstall'].includes(key) && typeof cmd === 'string') {
         installScriptCommands.push(cmd);
-        // If script executes e.g. "node setup.js" or "node ./scripts/postinstall.js"
-        const nodeMatch = cmd.match(/node\s+([\w./\\-]+)/);
-        if (nodeMatch && nodeMatch[1]) {
-          installScriptFiles.add(nodeMatch[1].replace(/^\.\//, ''));
+        // Match files invoked in the lifecycle command, e.g. "node ./scripts/postinstall.js", "node scripts/postinstall.js", "bash install.sh", "sh ./setup.sh"
+        const fileMatches = cmd.matchAll(/(?:node|sh|bash)\s+([^\s;&|]+)/g);
+        for (const match of fileMatches) {
+          if (match[1]) {
+            const cleanPath = match[1].replace(/^\.\//, '').trim();
+            installScriptFiles.add(cleanPath);
+          }
         }
       }
     }
