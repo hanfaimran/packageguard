@@ -8,3 +8,6 @@ coverage/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+
+*.d.ts.map
+*.js.map
