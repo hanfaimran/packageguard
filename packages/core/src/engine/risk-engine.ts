@@ -74,7 +74,7 @@ export class RiskEngine {
     // Correlated exfiltration pattern in lifecycle script
     const exfilInstall = dedupedEvidence.find(
       (e) =>
-        e.category === 'static-analysis' &&
+        (e.category === 'static-analysis' || e.category === 'version-diff') &&
         e.severity === 'CRITICAL' &&
         e.dedupKey.includes('exfiltration'),
     );
