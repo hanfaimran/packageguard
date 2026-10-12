@@ -1,0 +1,372 @@
+openapi: 3.0.3
+info:
+  title: PackageGuard API
+  description: >
+    PackageGuard verifies npm package trust and supply chain integrity BEFORE installation,
+    returning an explainable security score, cryptographic verification status, and structured evidence.
+  version: 0.1.0
+servers:
+  - url: https://{apiId}.execute-api.{region}.amazonaws.com/v1
+    description: Production API Gateway Endpoint
+    variables:
+      apiId:
+        default: your-api-id
+      region:
+        default: us-east-1
+
+paths:
+  /scan:
+    post:
+      summary: Initiate security scan of an npm package
+      description: >
+        Downloads and statically inspects the target package and its previous version tarballs
+        from the npm registry, calculates cryptographic verification status, static code heuristics,
+        and computes an explainable risk report stored in S3 and DynamoDB.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+      responses:
+        '201':
+          description: Scan successfully completed and persisted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResponse'
+        '400':
+          description: Input validation error or bad request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /scan/{id}:
+    get:
+      summary: Retrieve an existing scan report by scan ID
+      description: Returns the stored scan report metadata from DynamoDB and full JSON report from S3.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID of the completed scan
+          schema:
+            type: string
+            format: uuid
+            example: "123e4567-e89b-12d3-a456-426614174000"
+      responses:
+        '200':
+          description: Report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetScanResponse'
+        '400':
+          description: Invalid scan ID format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Scan ID not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /history:
+    get:
+      summary: Retrieve past scan history for a package
+      description: Returns all past scans recorded for a given package name in descending date order.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: package
+          in: query
+          required: true
+          description: The npm package name to retrieve scan history for
+          schema:
+            type: string
+            example: "lodash"
+      responses:
+        '200':
+          description: Scan history list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HistoryResponse'
+        '400':
+          description: Missing package query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - missing or invalid API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+      description: API Gateway generated API key required for client access
+
+  schemas:
+    ScanRequest:
+      type: object
+      required:
+        - package
+        - version
+      properties:
+        package:
+          type: string
+          description: Name of the npm package (plain or scoped)
+          example: "lodash"
+        version:
+          type: string
+          description: Semver version string
+          example: "4.17.21"
+        registryUrl:
+          type: string
+          description: Optional custom npm registry URL
+          example: "https://registry.npmjs.org"
+
+    ScanResponse:
+      type: object
+      required:
+        - scanId
+        - report
+      properties:
+        scanId:
+          type: string
+          format: uuid
+          example: "8b7e28b1-3829-4d69-9599-2a94fb001f3e"
+        report:
+          $ref: '#/components/schemas/Report'
+
+    GetScanResponse:
+      type: object
+      required:
+        - scanId
+        - package
+        - version
+        - riskScore
+        - verdict
+        - verificationStatus
+        - scannedAt
+      properties:
+        scanId:
+          type: string
+          format: uuid
+        package:
+          type: string
+        version:
+          type: string
+        riskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        verdict:
+          type: string
+          enum: [Safe, Review, Block]
+        verificationStatus:
+          type: string
+          enum: [Verified, PartiallyVerified, Unverified]
+        scannedAt:
+          type: string
+          format: date-time
+        report:
+          $ref: '#/components/schemas/Report'
+
+    HistoryResponse:
+      type: object
+      required:
+        - package
+        - count
+        - scans
+      properties:
+        package:
+          type: string
+        count:
+          type: integer
+        scans:
+          type: array
+          items:
+            type: object
+            required:
+              - scanId
+              - version
+              - riskScore
+              - verdict
+              - verificationStatus
+              - scannedAt
+            properties:
+              scanId:
+                type: string
+                format: uuid
+              version:
+                type: string
+              riskScore:
+                type: number
+              verdict:
+                type: string
+                enum: [Safe, Review, Block]
+              verificationStatus:
+                type: string
+                enum: [Verified, PartiallyVerified, Unverified]
+              hardBlocksCount:
+                type: integer
+              evidenceCount:
+                type: integer
+              scannedAt:
+                type: string
+                format: date-time
+
+    Report:
+      type: object
+      required:
+        - package
+        - version
+        - riskScore
+        - verdict
+        - verificationStatus
+        - breakdown
+        - hardBlocks
+        - evidence
+        - remediation
+      properties:
+        package:
+          type: string
+        version:
+          type: string
+        riskScore:
+          type: number
+          minimum: 0
+          maximum: 100
+        verdict:
+          type: string
+          enum: [Safe, Review, Block]
+        verificationStatus:
+          type: string
+          enum: [Verified, PartiallyVerified, Unverified]
+        breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              reason:
+                type: string
+              evidenceRefs:
+                type: array
+                items:
+                  type: string
+              confidence:
+                type: number
+              points:
+                type: number
+        hardBlocks:
+          type: array
+          items:
+            type: string
+        evidence:
+          type: array
+          items:
+            $ref: '#/components/schemas/Evidence'
+        remediation:
+          type: array
+          items:
+            type: object
+            properties:
+              issue:
+                type: string
+              recommendation:
+                type: string
+        policyApplied:
+          type: object
+          properties:
+            name:
+              type: string
+            passed:
+              type: boolean
+            violations:
+              type: array
+              items:
+                type: string
+
+    Evidence:
+      type: object
+      required:
+        - id
+        - scanner
+        - category
+        - severity
+        - confidence
+        - description
+        - dedupKey
+      properties:
+        id:
+          type: string
+        scanner:
+          type: string
+        category:
+          type: string
+          enum: [metadata, vulnerability, integrity, typosquat, static-analysis, version-diff, policy]
+        severity:
+          type: string
+          enum: [INFO, LOW, MEDIUM, HIGH, CRITICAL]
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+        description:
+          type: string
+        location:
+          type: object
+          properties:
+            file:
+              type: string
+            line:
+              type: integer
+        snippet:
+          type: string
+        dedupKey:
+          type: string
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: "Invalid package name format"

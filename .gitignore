@@ -11,3 +11,10 @@ Thumbs.db
 
 *.d.ts.map
 *.js.map
+
+infra/build
+services/api/dist
+infra/.terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
