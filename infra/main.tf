@@ -102,13 +102,13 @@ module "alerts" {
 module "api" {
   source = "./modules/api"
 
-  project_name             = var.project_name
-  stage_name               = "v1"
-  post_scan_lambda_arn     = module.lambda.post_scan_arn
-  post_scan_function_name  = module.lambda.post_scan_function_name
-  get_scan_lambda_arn      = module.lambda.get_scan_arn
-  get_scan_function_name   = module.lambda.get_scan_function_name
-  get_history_lambda_arn   = module.lambda.get_history_arn
+  project_name              = var.project_name
+  stage_name                = "v1"
+  post_scan_lambda_arn      = module.lambda.post_scan_arn
+  post_scan_function_name   = module.lambda.post_scan_function_name
+  get_scan_lambda_arn       = module.lambda.get_scan_arn
+  get_scan_function_name    = module.lambda.get_scan_function_name
+  get_history_lambda_arn    = module.lambda.get_history_arn
   get_history_function_name = module.lambda.get_history_function_name
-  tags                     = local.common_tags
+  tags                      = local.common_tags
 }
