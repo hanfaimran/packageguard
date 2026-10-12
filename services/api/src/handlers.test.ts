@@ -203,8 +203,8 @@ describe('PackageGuard Lambda Handlers', () => {
 
       const event = createMockEvent({
         httpMethod: 'GET',
-        path: '/scan/non-existent-id',
-        pathParameters: { id: 'non-existent-id' },
+        path: '/scan/00000000-0000-0000-0000-000000000000',
+        pathParameters: { id: '00000000-0000-0000-0000-000000000000' },
       });
 
       const result = await getScanByIdHandler(event);

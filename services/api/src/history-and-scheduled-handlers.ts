@@ -15,8 +15,6 @@ export const snsClient = new SNSClient({});
 const SCANS_TABLE = process.env.SCANS_TABLE_NAME || 'packageguard-scans';
 const WATCHLIST_TABLE = process.env.WATCHLIST_TABLE_NAME || 'packageguard-watchlist';
 const REPORTS_BUCKET = process.env.REPORTS_BUCKET_NAME || 'packageguard-reports';
-const ALERTS_TOPIC_ARN = process.env.ALERTS_TOPIC_ARN || '';
-
 /**
  * GET /history?package=<name>
  * Returns past scan records for the specified package, ordered by scan date.
@@ -190,7 +188,8 @@ export async function nightlyRescanHandler(
           riskScore: report.riskScore,
         });
 
-        if (ALERTS_TOPIC_ARN) {
+        const alertsTopicArn = process.env.ALERTS_TOPIC_ARN || '';
+        if (alertsTopicArn) {
           const alertMessage = {
             alarm: 'PackageSecurityDegradation',
             timestamp: now,
@@ -206,7 +205,7 @@ export async function nightlyRescanHandler(
 
           await snsClient.send(
             new PublishCommand({
-              TopicArn: ALERTS_TOPIC_ARN,
+              TopicArn: alertsTopicArn,
               Subject: `[PackageGuard Alert] Security Degradation: ${pkgName}@${version} is now ${report.verdict}`,
               Message: JSON.stringify(alertMessage, null, 2),
             }),
