@@ -1,3 +1,4 @@
+import { RegistryClient } from './clients/registry-client.js';
 export const PACKAGEGUARD_VERSION = '0.1.0';
 
 export function createEmptyEvidence(id: string, scanner: string): import('./types.js').Evidence {
@@ -138,15 +139,34 @@ export async function scanFromRegistry(
     throw new Error(`Version ${version} of package ${packageName} not found in registry`);
   }
 
+  /**
+   * Rewrite a tarball URL to use the configured registry origin.
+   * The registry document may contain URLs baked in at fixture-generation time
+   * pointing to a different host/port. For a custom registryUrl we always rewrite
+   * the host+port so tarballs are fetched from the correct server.
+   */
+  function rewriteTarballUrl(tarball: string): string {
+    if (!options.registryUrl) return tarball;
+    try {
+      const configured = new URL(options.registryUrl.replace(/\/$/, ''));
+      const embedded = new URL(tarball);
+      if (embedded.origin !== configured.origin) {
+        embedded.host = configured.host;
+        embedded.protocol = configured.protocol;
+        return embedded.toString();
+      }
+    } catch {
+      // If parsing fails, return the original URL unchanged
+    }
+    return tarball;
+  }
+
   // 2. Resolve tarball URL and download target version tarball
   let tarballUrl = targetVersionDoc.dist?.tarball;
   if (!tarballUrl) {
     throw new Error(`Tarball URL missing for ${packageName}@${version} in registry document`);
   }
-  // If registryUrl is custom (e.g. fake registry), normalize relative or host-swapped tarball URL
-  if (options.registryUrl && tarballUrl.startsWith('http://127.0.0.1:4000/')) {
-    tarballUrl = tarballUrl.replace('http://127.0.0.1:4000', options.registryUrl.replace(/\/$/, ''));
-  }
+  tarballUrl = rewriteTarballUrl(tarballUrl);
 
   const tarballBytes = await client.downloadTarball(tarballUrl);
 
@@ -160,7 +180,7 @@ export async function scanFromRegistry(
       if (['created', 'modified'].includes(v)) continue;
       if (v === version) continue;
       if (doc.versions?.[v]) {
-        const t = new Date(timeStr).getTime();
+        const t = new Date(timeStr as string).getTime();
         if (t <= targetPublishTime) {
           earlierVersions.push({ version: v, time: t });
         }
@@ -179,9 +199,7 @@ export async function scanFromRegistry(
     const prevDoc = doc.versions[previousVersion];
     let prevTarballUrl = prevDoc.dist?.tarball;
     if (prevTarballUrl) {
-      if (options.registryUrl && prevTarballUrl.startsWith('http://127.0.0.1:4000/')) {
-        prevTarballUrl = prevTarballUrl.replace('http://127.0.0.1:4000', options.registryUrl.replace(/\/$/, ''));
-      }
+      prevTarballUrl = rewriteTarballUrl(prevTarballUrl);
       try {
         previousVersionTarballBytes = await client.downloadTarball(prevTarballUrl);
         previousVersionMetadata = {
