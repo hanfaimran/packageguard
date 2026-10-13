@@ -42,8 +42,8 @@ resource "aws_iam_policy" "post_scan" {
       {
         Effect = "Allow"
         Action = [
-          "kms:Encrypt",
-          "kms:GenerateDataKey*"
+          "kms:GenerateDataKey",
+          "kms:Decrypt"
         ]
         Resource = var.kms_key_arn
       },
@@ -283,9 +283,8 @@ resource "aws_iam_policy" "nightly_rescan" {
       {
         Effect = "Allow"
         Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:GenerateDataKey*"
+          "kms:GenerateDataKey",
+          "kms:Decrypt"
         ]
         Resource = var.kms_key_arn
       },

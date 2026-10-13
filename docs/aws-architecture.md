@@ -99,10 +99,11 @@ flowchart TD
   - SNS topic encrypted with KMS CMK.
 - **Strict Least-Privilege IAM Roles**:
   - Each Lambda function has a dedicated IAM role with distinct action boundaries:
-    - `post-scan`: `s3:PutObject` on reports bucket, `dynamodb:PutItem` on scans table.
-    - `get-scan`: `dynamodb:GetItem` on scans table, `s3:GetObject` on reports bucket.
-    - `get-history`: `dynamodb:Query` on scans table and `PackageIndex` GSI only.
-    - `nightly-rescan`: `dynamodb:Scan`/`PutItem` on watchlist, `dynamodb:PutItem` on scans, `sns:Publish` on alerts topic.
+    - `post-scan`: `s3:PutObject` on reports bucket, `dynamodb:PutItem` on scans table, `kms:GenerateDataKey` and `kms:Decrypt` on customer-managed KMS key.
+    - `get-scan`: `dynamodb:GetItem` on scans table, `s3:GetObject` on reports bucket, `kms:Decrypt` on customer-managed KMS key.
+    - `get-history`: `dynamodb:Query` on scans table and `PackageIndex` GSI, `kms:Decrypt` on customer-managed KMS key.
+    - `nightly-rescan`: `dynamodb:Scan`/`PutItem` on watchlist, `dynamodb:PutItem` on scans, `s3:PutObject` on reports bucket, `sns:Publish` on alerts topic, `kms:GenerateDataKey` and `kms:Decrypt` on customer-managed KMS key.
+  - All KMS actions are strictly scoped to the single customer-managed KMS key ARN (no wildcard `*` resources).
   - No wildcard actions (`*`) on data resources.
 - **S3 Public Access Block**: All four public access block settings (`block_public_acls`, `block_public_policy`, `ignore_public_acls`, `restrict_public_buckets`) enforced on the reports bucket.
 - **S3 Object Versioning**: Enabled to prevent accidental deletion or tampering with historic reports.
