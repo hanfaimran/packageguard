@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc -b",
     "benchmark": "tsx src/run-benchmark.ts",
-    "demo": "tsx src/demo.ts"
+    "demo": "tsx src/demo.ts",
+    "serve": "tsx src/demo-server.ts"
   },
   "dependencies": {
     "@packageguard/core": "*",
