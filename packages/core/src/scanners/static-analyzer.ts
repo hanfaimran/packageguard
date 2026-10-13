@@ -212,19 +212,32 @@ export class StaticAnalyzer implements Scanner {
               }
 
               // child_process (exec, execSync, spawn)
+                            // child_process (exec, execSync, spawn) - only when the object really is child_process
               if (
                 callee.type === 'MemberExpression' &&
                 callee.property &&
                 ['exec', 'execSync', 'spawn', 'spawnSync'].includes(callee.property.name)
               ) {
-                rawSignals.push({
-                  ruleId: 'child-process-exec',
-                  category: 'exec',
-                  description: `Execution of system child process via child_process.${callee.property.name}()`,
-                  file: file.path,
-                  line,
-                  snippet: `child_process.${callee.property.name}(...)`,
-                });
+                const obj = callee.object;
+                const isChildProcess =
+                  (obj?.type === 'Identifier' &&
+                    (obj.name === 'child_process' ||
+                      new RegExp(
+                        `\\b${obj.name}\\s*=\\s*require\\(\\s*['"](?:node:)?child_process['"]`,
+                      ).test(file.content))) ||
+                  (obj?.type === 'CallExpression' &&
+                    obj.callee?.name === 'require' &&
+                    /^(?:node:)?child_process$/.test(String(obj.arguments?.[0]?.value)));
+                if (isChildProcess) {
+                  rawSignals.push({
+                    ruleId: 'child-process-exec',
+                    category: 'exec',
+                    description: `Execution of system child process via child_process.${callee.property.name}()`,
+                    file: file.path,
+                    line,
+                    snippet: `child_process.${callee.property.name}(...)`,
+                  });
+                }
               }
             },
             MemberExpression(node: any) {

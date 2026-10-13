@@ -18,3 +18,4 @@ infra/.terraform
 *.tfstate
 *.tfstate.*
 *.tfvars
+web/config.js

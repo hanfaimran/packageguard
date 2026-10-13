@@ -571,6 +571,15 @@
       margin-top: 1rem;
       font-size: 0.9rem;
     }
+
+    .info-msg {
+      background: rgba(56, 139, 253, 0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
@@ -588,6 +597,7 @@
     <!-- Navigation Tab Bar -->
     <nav class="tab-bar">
       <button class="tab-btn active" data-tab="scan" onclick="switchTab('scan')">Scan</button>
+      <button class="tab-btn" data-tab="project" onclick="switchTab('project')">Project</button>
       <button class="tab-btn" data-tab="status" onclick="switchTab('status')">Project Status</button>
       <button class="tab-btn" data-tab="results" onclick="switchTab('results')">Measured Results</button>
       <button class="tab-btn" data-tab="architecture" onclick="switchTab('architecture')">Cloud Architecture</button>
@@ -897,6 +907,53 @@
         </ul>
       </section>
     </div>
+
+    <!-- Tab 5: Project (Lockfile Scan) -->
+    <div id="tab-project" class="tab-pane">
+      <section class="card">
+        <h2>Scan a Project</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+          Upload your <span class="code-inline">package-lock.json</span> to scan all dependencies against the live npm registry.
+          Unique packages are scanned (max 50) at up to 5 at a time. Results are sorted by risk: Block first, then Review, then Safe.
+        </p>
+        <div class="form-group">
+          <input type="file" id="lockfileInput" accept=".json,application/json"
+            style="flex:1; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0.55rem 0.85rem; color: var(--heading); font-size: 0.9rem; cursor: pointer;">
+          <button type="button" id="lockfileScanBtn" class="btn-primary" onclick="triggerLockfileScan()">Scan Project</button>
+        </div>
+        <div id="lockfileError" class="error-msg" style="display: none;"></div>
+        <div id="lockfileProgress" style="display: none; margin-top: 1rem;">
+          <div style="color: var(--accent); font-size: 0.9rem;" id="lockfileProgressMsg">Scanning...</div>
+          <div style="margin-top: 0.5rem; background: var(--border); height: 6px; border-radius: 3px; overflow: hidden;">
+            <div id="lockfileProgressBar" style="background: var(--accent); height: 100%; width: 0%; border-radius: 3px; transition: width 0.3s;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="lockfileResultsCard" class="card" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+          <h2 style="margin: 0;">Results</h2>
+          <div id="lockfileSummaryBadges" style="display: flex; gap: 0.65rem; flex-wrap: wrap;"></div>
+        </div>
+        <div id="lockfileCapWarning" style="display: none; margin-bottom: 0.75rem;" class="info-msg">
+          &#9888; Lockfile contained more than 50 unique packages. Only the first 50 were scanned.
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="evidence-table">
+            <thead>
+              <tr>
+                <th>Package</th>
+                <th>Version</th>
+                <th>Verdict</th>
+                <th>Trust Score</th>
+                <th>Hard Blocks</th>
+              </tr>
+            </thead>
+            <tbody id="lockfileTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
   </div>
 
   <script>
@@ -910,7 +967,7 @@
         .replace(/'/g, '&#039;');
     }
 
-    const VALID_TABS = ['scan', 'status', 'results', 'architecture'];
+    const VALID_TABS = ['scan', 'project', 'status', 'results', 'architecture'];
 
     function switchTab(tabId) {
       if (!VALID_TABS.includes(tabId)) {
@@ -1092,6 +1149,154 @@
         remList.innerHTML = remItems.map(function(r) {
           return '<li><strong>' + escapeHtml(r.issue) + ':</strong> ' + escapeHtml(r.recommendation) + '</li>';
         }).join('');
+      }
+    }
+
+    async function triggerLockfileScan() {
+      const input = document.getElementById('lockfileInput');
+      const scanBtn = document.getElementById('lockfileScanBtn');
+      const errBox = document.getElementById('lockfileError');
+      const progressBox = document.getElementById('lockfileProgress');
+      const progressMsg = document.getElementById('lockfileProgressMsg');
+      const progressBar = document.getElementById('lockfileProgressBar');
+      const resultsCard = document.getElementById('lockfileResultsCard');
+      const tbody = document.getElementById('lockfileTableBody');
+      const summaryBadges = document.getElementById('lockfileSummaryBadges');
+      const capWarning = document.getElementById('lockfileCapWarning');
+
+      errBox.style.display = 'none';
+      errBox.textContent = '';
+
+      if (!input.files || input.files.length === 0) {
+        errBox.textContent = 'Please select a package-lock.json file first.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      const file = input.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        errBox.textContent = 'File exceeds the 2 MB limit for lockfile scanning.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      let content = '';
+      try {
+        content = await file.text();
+      } catch (err) {
+        errBox.textContent = 'Could not read file: ' + (err.message || String(err));
+        errBox.style.display = 'block';
+        return;
+      }
+
+      scanBtn.disabled = true;
+      scanBtn.textContent = 'Scanning...';
+      progressBox.style.display = 'block';
+      progressBar.style.width = '35%';
+      progressMsg.textContent = 'Uploading and scanning packages against live npm registry...';
+
+      try {
+        const res = await fetch('/api/scan-lockfile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: content,
+        });
+
+        progressBar.style.width = '85%';
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to scan lockfile');
+        }
+
+        progressBar.style.width = '100%';
+        progressMsg.textContent = 'Scan complete! Rendering results...';
+
+        const results = Array.isArray(data.results) ? data.results : [];
+
+        // Count summary
+        let blockCount = 0;
+        let reviewCount = 0;
+        let safeCount = 0;
+        let errorCount = 0;
+
+        results.forEach(function(r) {
+          if (r.error) {
+            errorCount++;
+          } else if (r.verdict === 'Block') {
+            blockCount++;
+          } else if (r.verdict === 'Review') {
+            reviewCount++;
+          } else if (r.verdict === 'Safe') {
+            safeCount++;
+          }
+        });
+
+        // Sort: Block -> Review -> Safe -> Errors
+        const verdictOrder = { 'Block': 1, 'Review': 2, 'Safe': 3 };
+        const sorted = results.slice().sort(function(a, b) {
+          const ordA = a.error ? 4 : (verdictOrder[a.verdict] || 5);
+          const ordB = b.error ? 4 : (verdictOrder[b.verdict] || 5);
+          if (ordA !== ordB) return ordA - ordB;
+          return (a.package || '').localeCompare(b.package || '');
+        });
+
+        // Render summary badges
+        let badgesHtml = '';
+        badgesHtml += '<span class="verdict-badge verdict-block" style="font-size:0.75rem; padding:0.25rem 0.6rem;">' + blockCount + ' Block</span>';
+        badgesHtml += '<span class="verdict-badge verdict-review" style="font-size:0.75rem; padding:0.25rem 0.6rem;">' + reviewCount + ' Review</span>';
+        badgesHtml += '<span class="verdict-badge verdict-safe" style="font-size:0.75rem; padding:0.25rem 0.6rem;">' + safeCount + ' Safe</span>';
+        if (errorCount > 0) {
+          badgesHtml += '<span class="verdict-badge" style="font-size:0.75rem; padding:0.25rem 0.6rem; background:var(--border); color:var(--text-muted);">' + errorCount + ' Failed</span>';
+        }
+        badgesHtml += '<span style="font-size:0.8rem; color:var(--text-muted); align-self:center;">Total scanned: ' + (data.scanned || sorted.length) + (data.capped ? (' of ' + data.total) : '') + '</span>';
+        summaryBadges.innerHTML = badgesHtml;
+
+        if (data.capped) {
+          capWarning.style.display = 'block';
+        } else {
+          capWarning.style.display = 'none';
+        }
+
+        // Render table rows
+        tbody.innerHTML = sorted.map(function(item) {
+          if (item.error) {
+            return '<tr>' +
+              '<td><strong>' + escapeHtml(item.package) + '</strong></td>' +
+              '<td><span class="code-inline">' + escapeHtml(item.version) + '</span></td>' +
+              '<td><span class="verdict-badge" style="background:var(--border); color:var(--text-muted);">Error</span></td>' +
+              '<td>-</td>' +
+              '<td style="color:#f85149; font-size:0.85rem;">' + escapeHtml(item.error) + '</td>' +
+            '</tr>';
+          }
+
+          const v = item.verdict || 'Unknown';
+          const badgeClass = v === 'Block' ? 'verdict-block' : (v === 'Review' ? 'verdict-review' : 'verdict-safe');
+          const score = typeof item.riskScore === 'number' ? item.riskScore + ' / 100' : '-';
+          const blocks = (Array.isArray(item.hardBlocks) && item.hardBlocks.length > 0)
+            ? item.hardBlocks.map(function(hb) { return '<span class="severity-badge sev-critical" style="margin-right:4px;">' + escapeHtml(hb) + '</span>'; }).join('')
+            : '<span style="color:var(--text-muted); font-size:0.8rem;">None</span>';
+
+          return '<tr>' +
+            '<td><strong>' + escapeHtml(item.package) + '</strong></td>' +
+            '<td><span class="code-inline">' + escapeHtml(item.version) + '</span></td>' +
+            '<td><span class="verdict-badge ' + badgeClass + '">' + escapeHtml(v) + '</span></td>' +
+            '<td>' + escapeHtml(score) + '</td>' +
+            '<td>' + blocks + '</td>' +
+          '</tr>';
+        }).join('');
+
+        resultsCard.style.display = 'block';
+      } catch (err) {
+        errBox.textContent = (err && err.message) ? err.message : String(err);
+        errBox.style.display = 'block';
+      } finally {
+        scanBtn.disabled = false;
+        scanBtn.textContent = 'Scan Project';
+        setTimeout(function() {
+          progressBox.style.display = 'none';
+          progressBar.style.width = '0%';
+        }, 1500);
       }
     }
 
