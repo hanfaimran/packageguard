@@ -29,29 +29,53 @@ export class VersionDiffScanner implements Scanner {
     const prevFileMap = new Map<string, ExtractedFile>(previousFiles.map((f) => [f.path, f]));
     const currFileMap = new Map<string, ExtractedFile>(currentFiles.map((f) => [f.path, f]));
 
-    // 1. Maintainer changes comparison
+        // 1. Publisher / maintainer change comparison
     const currMeta = ctx.registryMetadata;
     const prevMeta = ctx.previousVersionMetadata;
     if (currMeta && prevMeta) {
-      const prevMaintainers = new Set(
-        ((prevMeta.maintainers as Array<{ name: string }>) || []).map((m) => m.name),
-      );
-      const currMaintainers = (currMeta.maintainers as Array<{ name: string }>) || [];
-      const newMaintainers = currMaintainers.filter((m) => !prevMaintainers.has(m.name));
+      const currVersions = (currMeta.versions as Record<string, any>) || {};
+      const prevVersions = (prevMeta.versions as Record<string, any>) || {};
+      const prevKeys = Object.keys(prevVersions);
+      const currPublisher = currVersions[ctx.version]?._npmUser?.name as string | undefined;
+      const prevPublisher =
+        prevKeys.length === 1 ? (prevVersions[prevKeys[0]]?._npmUser?.name as string | undefined) : undefined;
 
-      if (newMaintainers.length > 0 && prevMaintainers.size > 0) {
-        evidence.push({
-          id: `diff-new-maintainer-${newMaintainers[0].name}`,
-          scanner: this.name,
-          category: 'version-diff',
-          severity: 'MEDIUM',
-          confidence: 0.8,
-          description: `New maintainer (${newMaintainers.map((m) => m.name).join(', ')}) added in ${ctx.version}, absent in previous version`,
-          dedupKey: `version-diff:maintainer:added:${newMaintainers[0].name}`,
-          rawData: {
-            newMaintainers: newMaintainers.map((m) => m.name),
-          },
-        });
+      if (currPublisher && prevPublisher) {
+        // Real registries: compare who actually published each version
+        if (currPublisher !== prevPublisher) {
+          evidence.push({
+            id: `diff-publisher-changed-${currPublisher}`,
+            scanner: this.name,
+            category: 'version-diff',
+            severity: 'MEDIUM',
+            confidence: 0.8,
+            description: `Publisher changed: ${ctx.version} was published by ${currPublisher}, previous version by ${prevPublisher}`,
+            dedupKey: `version-diff:publisher:changed:${currPublisher}`,
+            rawData: { currPublisher, prevPublisher },
+          });
+        }
+      } else if (prevKeys.length <= 1) {
+        // Per-version documents (fixtures): compare maintainer lists
+        const prevMaintainers = new Set(
+          ((prevMeta.maintainers as Array<{ name: string }>) || []).map((m) => m.name),
+        );
+        const currMaintainers = (currMeta.maintainers as Array<{ name: string }>) || [];
+        const newMaintainers = currMaintainers.filter((m) => !prevMaintainers.has(m.name));
+
+        if (newMaintainers.length > 0 && prevMaintainers.size > 0) {
+          evidence.push({
+            id: `diff-new-maintainer-${newMaintainers[0].name}`,
+            scanner: this.name,
+            category: 'version-diff',
+            severity: 'MEDIUM',
+            confidence: 0.8,
+            description: `New maintainer (${newMaintainers.map((m) => m.name).join(', ')}) added in ${ctx.version}, absent in previous version`,
+            dedupKey: `version-diff:maintainer:added:${newMaintainers[0].name}`,
+            rawData: {
+              newMaintainers: newMaintainers.map((m) => m.name),
+            },
+          });
+        }
       }
     }
 
