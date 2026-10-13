@@ -99,6 +99,201 @@ resource "aws_api_gateway_integration" "get_history" {
 data "aws_region" "current" {}
 
 # ---------------------------------------------------------------------------
+# CORS Configuration for API Endpoints (/scan, /scan/{id}, /history)
+# OPTIONS methods must have authorization NONE and api_key_required = false
+# ---------------------------------------------------------------------------
+
+# 1. OPTIONS /scan
+resource "aws_api_gateway_method" "options_scan" {
+  rest_api_id      = aws_api_gateway_rest_api.main.id
+  resource_id      = aws_api_gateway_resource.scan.id
+  http_method      = "OPTIONS"
+  authorization    = "NONE"
+  api_key_required = false
+}
+
+resource "aws_api_gateway_integration" "options_scan" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.scan.id
+  http_method = aws_api_gateway_method.options_scan.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_scan" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.scan.id
+  http_method = aws_api_gateway_method.options_scan.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options_scan" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.scan.id
+  http_method = aws_api_gateway_method.options_scan.http_method
+  status_code = aws_api_gateway_method_response.options_scan.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Api-Key'"
+    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,POST'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.options_scan,
+    aws_api_gateway_method_response.options_scan,
+  ]
+}
+
+# 2. OPTIONS /scan/{id}
+resource "aws_api_gateway_method" "options_scan_id" {
+  rest_api_id      = aws_api_gateway_rest_api.main.id
+  resource_id      = aws_api_gateway_resource.scan_id.id
+  http_method      = "OPTIONS"
+  authorization    = "NONE"
+  api_key_required = false
+}
+
+resource "aws_api_gateway_integration" "options_scan_id" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.scan_id.id
+  http_method = aws_api_gateway_method.options_scan_id.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_scan_id" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.scan_id.id
+  http_method = aws_api_gateway_method.options_scan_id.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options_scan_id" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.scan_id.id
+  http_method = aws_api_gateway_method.options_scan_id.http_method
+  status_code = aws_api_gateway_method_response.options_scan_id.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Api-Key'"
+    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,GET'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.options_scan_id,
+    aws_api_gateway_method_response.options_scan_id,
+  ]
+}
+
+# 3. OPTIONS /history
+resource "aws_api_gateway_method" "options_history" {
+  rest_api_id      = aws_api_gateway_rest_api.main.id
+  resource_id      = aws_api_gateway_resource.history.id
+  http_method      = "OPTIONS"
+  authorization    = "NONE"
+  api_key_required = false
+}
+
+resource "aws_api_gateway_integration" "options_history" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.history.id
+  http_method = aws_api_gateway_method.options_history.http_method
+  type        = "MOCK"
+
+  request_templates = {
+    "application/json" = "{\"statusCode\": 200}"
+  }
+}
+
+resource "aws_api_gateway_method_response" "options_history" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.history.id
+  http_method = aws_api_gateway_method.options_history.http_method
+  status_code = "200"
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = true
+    "method.response.header.Access-Control-Allow-Methods" = true
+    "method.response.header.Access-Control-Allow-Origin"  = true
+  }
+
+  response_models = {
+    "application/json" = "Empty"
+  }
+}
+
+resource "aws_api_gateway_integration_response" "options_history" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.history.id
+  http_method = aws_api_gateway_method.options_history.http_method
+  status_code = aws_api_gateway_method_response.options_history.status_code
+
+  response_parameters = {
+    "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Api-Key'"
+    "method.response.header.Access-Control-Allow-Methods" = "'OPTIONS,GET'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+  }
+
+  depends_on = [
+    aws_api_gateway_integration.options_history,
+    aws_api_gateway_method_response.options_history,
+  ]
+}
+
+# ---------------------------------------------------------------------------
+# Gateway Responses with CORS for 4XX and 5XX (so 403s etc. are browser-readable)
+# ---------------------------------------------------------------------------
+resource "aws_api_gateway_gateway_response" "default_4xx" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  response_type = "DEFAULT_4XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Api-Key'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+  }
+}
+
+resource "aws_api_gateway_gateway_response" "default_5xx" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  response_type = "DEFAULT_5XX"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin"  = "'*'"
+    "gatewayresponse.header.Access-Control-Allow-Headers" = "'Content-Type,X-Api-Key'"
+    "gatewayresponse.header.Access-Control-Allow-Methods" = "'GET,POST,OPTIONS'"
+  }
+}
+
+# ---------------------------------------------------------------------------
 # Deployment & Stage
 # ---------------------------------------------------------------------------
 resource "aws_api_gateway_deployment" "main" {
@@ -108,6 +303,14 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_integration.post_scan,
     aws_api_gateway_integration.get_scan,
     aws_api_gateway_integration.get_history,
+    aws_api_gateway_integration.options_scan,
+    aws_api_gateway_integration.options_scan_id,
+    aws_api_gateway_integration.options_history,
+    aws_api_gateway_integration_response.options_scan,
+    aws_api_gateway_integration_response.options_scan_id,
+    aws_api_gateway_integration_response.options_history,
+    aws_api_gateway_gateway_response.default_4xx,
+    aws_api_gateway_gateway_response.default_5xx,
   ]
 
   triggers = {
@@ -121,6 +324,17 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.post_scan.id,
       aws_api_gateway_integration.get_scan.id,
       aws_api_gateway_integration.get_history.id,
+      aws_api_gateway_method.options_scan.id,
+      aws_api_gateway_method.options_scan_id.id,
+      aws_api_gateway_method.options_history.id,
+      aws_api_gateway_integration.options_scan.id,
+      aws_api_gateway_integration.options_scan_id,
+      aws_api_gateway_integration.options_history.id,
+      aws_api_gateway_integration_response.options_scan.id,
+      aws_api_gateway_integration_response.options_scan_id,
+      aws_api_gateway_integration_response.options_history.id,
+      aws_api_gateway_gateway_response.default_4xx.id,
+      aws_api_gateway_gateway_response.default_5xx.id,
     ]))
   }
 

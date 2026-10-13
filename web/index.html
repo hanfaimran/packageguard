@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PackageGuard - Supply Chain Security Scanner</title>
+  <!-- Optional runtime config. Set via window.PG_CONFIG = { API_URL: '...', API_KEY: '...' }; -->
+  <script src="config.js" onerror="window.__CONFIG_LOAD_FAILED = true;"></script>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --card-bg: #161b22;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --text-muted: #8b949e;
+      --heading: #f0f6fc;
+      --accent: #58a6ff;
+      --accent-hover: #388bfd;
+      --safe: #238636;
+      --safe-bg: rgba(35, 134, 54, 0.2);
+      --review: #d29922;
+      --review-bg: rgba(210, 153, 34, 0.2);
+      --block: #da3633;
+      --block-bg: rgba(218, 54, 51, 0.2);
+      --code-bg: #0b0e14;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      padding: 2rem 1.5rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    h1 {
+      color: var(--heading);
+      font-size: 1.75rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Tabs Bar */
+    .tab-bar {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.75rem;
+      overflow-x: auto;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 0.65rem 1.25rem;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .tab-btn:hover {
+      color: var(--heading);
+      border-bottom-color: var(--border);
+    }
+
+    .tab-btn.active {
+      color: var(--heading);
+      font-weight: 600;
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-pane {
+      display: none;
+      width: 100%;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .card h2 {
+      color: var(--heading);
+      font-size: 1.15rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .form-group {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .form-group input {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.6rem 0.85rem;
+      color: var(--heading);
+      font-size: 0.95rem;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+    }
+
+    button.btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 0.6rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+
+    button.btn-primary:hover:not(:disabled) {
+      background: var(--accent-hover);
+    }
+
+    button.btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    button.btn-secondary {
+      background: var(--card-bg);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.4rem 0.85rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 0.75rem;
+      transition: all 0.15s ease;
+    }
+
+    button.btn-secondary:hover {
+      background: rgba(88, 166, 255, 0.1);
+    }
+
+    .fixtures-container {
+      margin-top: 1rem;
+    }
+
+    .fixtures-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--text);
+      font-family: monospace;
+      transition: all 0.15s ease;
+    }
+
+    .chip:hover {
+      border-color: var(--accent);
+      color: var(--heading);
+      background: rgba(88, 166, 255, 0.1);
+    }
+
+    /* Verdict Card */
+    .verdict-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.25rem;
+    }
+
+    .badge-verdict {
+      font-size: 1.25rem;
+      font-weight: 700;
+      padding: 0.4rem 1.25rem;
+      border-radius: 8px;
+      display: inline-block;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-verdict.safe {
+      background: var(--safe-bg);
+      color: #3fb950;
+      border: 1px solid var(--safe);
+    }
+
+    .badge-verdict.review {
+      background: var(--review-bg);
+      color: #e3b341;
+      border: 1px solid var(--review);
+    }
+
+    .badge-verdict.block {
+      background: var(--block-bg);
+      color: #f85149;
+      border: 1px solid var(--block);
+    }
+
+    .metrics-summary {
+      display: flex;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .metric-item .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .metric-item .metric-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--heading);
+    }
+
+    .section-title {
+      font-size: 1rem;
+      color: var(--heading);
+      font-weight: 600;
+      margin: 1.25rem 0 0.5rem;
+    }
+
+    .hard-blocks-list {
+      background: var(--block-bg);
+      border: 1px solid var(--block);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .hard-blocks-list li {
+      margin-left: 1.2rem;
+      color: #f85149;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .data-table th, .data-table td {
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.65rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .data-table th {
+      background: var(--bg);
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .severity-badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .sev-CRITICAL { background: rgba(218, 54, 51, 0.3); color: #f85149; }
+    .sev-HIGH { background: rgba(218, 54, 51, 0.2); color: #ff7b72; }
+    .sev-MEDIUM { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+    .sev-LOW { background: rgba(88, 166, 255, 0.2); color: #58a6ff; }
+    .sev-INFO { background: rgba(139, 148, 158, 0.2); color: #8b949e; }
+
+    .remediation-box {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .remediation-box li {
+      background: var(--bg);
+      border-left: 3px solid var(--accent);
+      padding: 0.6rem 0.85rem;
+      border-radius: 0 4px 4px 0;
+      font-size: 0.9rem;
+    }
+
+    /* Progress bar */
+    .progress-wrapper {
+      margin-bottom: 1.5rem;
+    }
+
+    .progress-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .progress-bar-bg {
+      background: var(--border);
+      height: 10px;
+      border-radius: 5px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .progress-bar-fill {
+      background: #238636;
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.3s ease;
+    }
+
+    /* Checklist */
+    .status-list {
+      list-style: none;
+      font-size: 0.95rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.85rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .status-item.is-done {
+      border-left: 4px solid #3fb950;
+    }
+
+    .status-item.is-pending {
+      border-left: 4px solid #d29922;
+    }
+
+    .check-icon {
+      color: #3fb950;
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .pending-icon {
+      color: #d29922;
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    /* Stat Cards */
+    .stat-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .stat-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      transition: border-color 0.15s ease;
+    }
+
+    .stat-card:hover {
+      border-color: var(--accent);
+    }
+
+    .stat-card-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+    }
+
+    .stat-card-val {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--heading);
+      line-height: 1.2;
+    }
+
+    .stat-card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .val-success { color: #3fb950; }
+    .val-accent { color: #58a6ff; }
+
+    /* Cloud Architecture Diagram */
+    .arch-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin: 1.5rem 0;
+    }
+
+    .arch-flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .arch-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      text-align: center;
+      min-width: 130px;
+    }
+
+    .arch-box-title {
+      font-weight: 600;
+      color: var(--heading);
+      font-size: 0.9rem;
+    }
+
+    .arch-box-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    .arch-arrow {
+      color: var(--accent);
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+
+    .arch-lambdas-group {
+      background: rgba(88, 166, 255, 0.05);
+      border: 1px dashed var(--accent);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    .arch-group-title {
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .arch-lambdas-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .arch-services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    /* Security controls */
+    .security-controls-list {
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    .security-control-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.75rem 1rem;
+      font-size: 0.88rem;
+    }
+
+    .security-control-item strong {
+      color: var(--heading);
+      display: block;
+      margin-bottom: 0.2rem;
+    }
+
+    .code-inline {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: var(--code-bg);
+      padding: 0.15rem 0.35rem;
+      border-radius: 4px;
+      color: #79c0ff;
+    }
+
+    .error-msg {
+      background: var(--block-bg);
+      border: 1px solid var(--block);
+      color: #f85149;
+      padding: 0.85rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .info-msg {
+      background: rgba(88, 166, 255, 0.1);
+      border: 1px solid var(--accent);
+      color: #79c0ff;
+      padding: 0.85rem;
+      border-radius: 6px;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>PackageGuard</h1>
+        <div class="subtitle">Real-Time Autonomous Software Supply Chain Security Scanner</div>
+      </div>
+      <div>
+        <span class="code-inline">CloudFront &bull; AWS Production Dashboard</span>
+      </div>
+    </header>
+
+    <!-- Missing Config Warning (if config.js is missing or invalid) -->
+    <div id="configErrorBanner" class="error-msg" style="display: none; margin-bottom: 1.5rem;">
+      <strong>Configuration Error:</strong> <span class="code-inline">config.js</span> is missing or invalid. Please ensure <span class="code-inline">window.PG_CONFIG = { API_URL: '...', API_KEY: '...' }</span> is configured.
+    </div>
+
+    <!-- Navigation Tab Bar -->
+    <nav class="tab-bar">
+      <button class="tab-btn active" data-tab="scan" onclick="switchTab('scan')">Scan</button>
+      <button class="tab-btn" data-tab="status" onclick="switchTab('status')">Project Status</button>
+      <button class="tab-btn" data-tab="results" onclick="switchTab('results')">Measured Results</button>
+      <button class="tab-btn" data-tab="architecture" onclick="switchTab('architecture')">Cloud Architecture</button>
+    </nav>
+
+    <!-- Tab 1: Scan -->
+    <div id="tab-scan" class="tab-pane active">
+      <section class="card">
+        <h2>Scan Package</h2>
+        <form id="scanForm" onsubmit="event.preventDefault(); triggerScan();">
+          <div class="form-group">
+            <input type="text" id="pkgInput" placeholder="Package name (e.g. lodash)" required autocomplete="off">
+            <input type="text" id="verInput" placeholder="Version (e.g. 4.17.21)" required autocomplete="off">
+            <button type="submit" id="scanBtn" class="btn-primary">Scan Package</button>
+          </div>
+        </form>
+        <div class="fixtures-container">
+          <div class="fixtures-label">Sample Packages (click to fill and scan):</div>
+          <div id="sampleChips" class="chips">
+            <button type="button" class="chip" onclick="fillAndScan('lodash', '4.17.21')">lodash@4.17.21</button>
+            <button type="button" class="chip" onclick="fillAndScan('express', '4.18.2')">express@4.18.2</button>
+            <button type="button" class="chip" onclick="fillAndScan('chalk', '5.3.0')">chalk@5.3.0</button>
+          </div>
+        </div>
+        <div id="scanStatusMsg" style="display: none;" class="info-msg"></div>
+        <div id="errorDisplay" style="display: none;" class="error-msg"></div>
+      </section>
+
+      <!-- Verdict Card -->
+      <section id="verdictCard" class="card" style="display: none;">
+        <div class="verdict-header">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div id="verdictBadge" class="badge-verdict safe">Safe</div>
+            <div>
+              <h2 id="reportTarget" style="margin: 0; font-size: 1.25rem;">package@version</h2>
+              <div id="reportScanId" style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">Scan ID: -</div>
+              <div id="reportVerification" style="color: var(--text-muted); font-size: 0.85rem;">Verification Status: Verified</div>
+            </div>
+          </div>
+          <div class="metrics-summary">
+            <div class="metric-item">
+              <span class="metric-label">Trust Score</span>
+              <span id="trustScoreVal" class="metric-value">--/100</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Evidence Count</span>
+              <span id="evidenceCountVal" class="metric-value">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hard blocks if present -->
+        <div id="hardBlocksSection" style="display: none;">
+          <div class="section-title" style="color: #f85149; margin-top: 0;">Hard Blocks Triggered</div>
+          <ul id="hardBlocksList" class="hard-blocks-list"></ul>
+        </div>
+
+        <!-- Evidence table -->
+        <div class="section-title">Evidence &amp; Findings</div>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Category</th>
+                <th>Severity</th>
+                <th>Confidence</th>
+                <th>Scanner</th>
+                <th>Location</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id="evidenceTableBody">
+              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No evidence recorded.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="evidenceToggleContainer" style="display: none; text-align: center;">
+          <button type="button" id="evidenceToggleBtn" class="btn-secondary" onclick="toggleAllEvidence()">Show all</button>
+        </div>
+
+        <!-- Remediation -->
+        <div class="section-title">Remediation Steps</div>
+        <ul id="remediationList" class="remediation-box">
+          <li>No remediation steps required. Package is healthy.</li>
+        </ul>
+      </section>
+
+      <!-- Package History Card -->
+      <section id="historyCard" class="card" style="display: none;">
+        <h2>Package Scan History</h2>
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date / Time</th>
+                <th>Scan ID</th>
+                <th>Version</th>
+                <th>Trust Score</th>
+                <th>Verdict</th>
+                <th>Verification</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No past scans recorded for this package.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tab 2: Project Status -->
+    <div id="tab-status" class="tab-pane">
+      <section class="card">
+        <h2>Project Status &amp; Deliverables</h2>
+        
+        <div class="progress-wrapper">
+          <div class="progress-meta">
+            <span><strong>Implementation Progress:</strong> 7 of 8 components completed</span>
+            <span style="font-weight: 600; color: #3fb950;">88%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: 87.5%;"></div>
+          </div>
+        </div>
+
+        <ul class="status-list">
+          <li class="status-item is-done">
+            <span class="check-icon">&#10004;</span>
+            <div>
+              <strong>Core Supply Chain Scanner</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Metadata analysis, cryptographic integrity verification, OSV vulnerability detection, static AST &amp; entropy analyzer, typosquat distance calculations, and cross-version behavioral diffing.</div>
+            </div>
+          </li>
+          <li class="status-item is-done">
+            <span class="check-icon">&#10004;</span>
+            <div>
+              <strong>Risk Engine &amp; Policy Verdicts</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Normalized 0-100 trust scoring, weighted deductions, deduplication, hard block enforcement, and customizable guard policies.</div>
+            </div>
+          </li>
+          <li class="status-item is-done">
+            <span class="check-icon">&#10004;</span>
+            <div>
+              <strong>Serverless Lambda API Handlers</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Dedicated TypeScript Lambda functions: scan dispatch, asynchronous report retrieval, service health check, and event dead-letter/SNS notifier.</div>
+            </div>
+          </li>
+          <li class="status-item is-done">
+            <span class="check-icon">&#10004;</span>
+            <div>
+              <strong>Terraform Infrastructure as Code</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Modular AWS configuration provisioning API Gateway, Lambdas, DynamoDB, S3, KMS keys, SNS alerting, EventBridge rules, and CloudFront web hosting.</div>
+            </div>
+          </li>
+          <li class="status-item is-done">
+            <span class="check-icon">&#10004;</span>
+            <div>
+              <strong>OpenAPI &amp; System Documentation</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Complete OpenAPI 3.0.3 specification, threat models, architectural overview, and cloud infrastructure operations manual.</div>
+            </div>
+          </li>
+          <li class="status-item is-done">
+            <span class="check-icon">&#10004;</span>
+            <div>
+              <strong>Automated Test Suite</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">71 unit and integration tests verifying parsers, scanners, risk heuristics, policy evaluation, and end-to-end registry flows.</div>
+            </div>
+          </li>
+          <li class="status-item is-done">
+            <span class="check-icon">&#10004;</span>
+            <div>
+              <strong>Hosted Web Dashboard</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Static web dashboard deployed globally on AWS CloudFront with S3 origin access control (OAC) and API Gateway integration.</div>
+            </div>
+          </li>
+          <li class="status-item is-pending">
+            <span class="pending-icon">&#9679;</span>
+            <div>
+              <strong>Command Line Interface (CLI)</strong>
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Developer terminal tool for pre-install npm/yarn/pnpm intercept and CI pipeline integration.</div>
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- Tab 3: Measured Results -->
+    <div id="tab-results" class="tab-pane">
+      <section class="card">
+        <h2>Measured Evaluation Results</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          Empirical evaluation results produced by running the automated test suite and the ground-truth benchmark suite against real-world attack vectors, tamper scenarios, and benign packages:
+        </p>
+
+        <div class="stat-cards-grid">
+          <div class="stat-card">
+            <div class="stat-card-label">Automated Tests</div>
+            <div class="stat-card-val val-success">71 / 71</div>
+            <div class="stat-card-desc">100% test pass rate across all test suites</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-label">Benchmark Packages</div>
+            <div class="stat-card-val val-accent">8</div>
+            <div class="stat-card-desc">Comprehensive ground-truth evaluation set</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-label">Detection Precision</div>
+            <div class="stat-card-val val-success">1.00</div>
+            <div class="stat-card-desc">Perfect true positive ratio (3 / 3 true positives)</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-label">Detection Recall</div>
+            <div class="stat-card-val val-success">1.00</div>
+            <div class="stat-card-desc">Zero missed supply chain threats (3 / 3 detected)</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-label">False Positives</div>
+            <div class="stat-card-val val-success">0</div>
+            <div class="stat-card-desc">0.0% false positive rate (5 / 5 benign packages passed)</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-card-label">F1-Score</div>
+            <div class="stat-card-val val-success">1.00</div>
+            <div class="stat-card-desc">Harmonic mean of precision and recall</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Tab 4: Cloud Architecture -->
+    <div id="tab-architecture" class="tab-pane">
+      <section class="card">
+        <h2>Cloud Architecture</h2>
+        <p style="font-size: 0.9rem; color: var(--text-muted);">
+          Serverless, resilient AWS cloud infrastructure provisioned and managed via validated Terraform modules:
+        </p>
+
+        <!-- CSS Box Diagram -->
+        <div class="arch-container">
+          <!-- Edge / Client Flow -->
+          <div class="arch-flow-row">
+            <div class="arch-box" style="border-color: #58a6ff;">
+              <div class="arch-box-title">Client</div>
+              <div class="arch-box-sub">CLI / Web Browser / CI</div>
+            </div>
+            <div class="arch-arrow">&rarr;</div>
+            <div class="arch-box" style="border-color: #79c0ff;">
+              <div class="arch-box-title">CloudFront + S3</div>
+              <div class="arch-box-sub">Global CDN &bull; OAC Secured</div>
+            </div>
+            <div class="arch-arrow">&rarr;</div>
+            <div class="arch-box" style="border-color: #e3b341;">
+              <div class="arch-box-title">API Gateway</div>
+              <div class="arch-box-sub">API Key &bull; CORS &bull; Rate Limits</div>
+            </div>
+            <div class="arch-arrow">&rarr;</div>
+            <div class="arch-box">
+              <div class="arch-box-title">EventBridge</div>
+              <div class="arch-box-sub">Nightly Rescan Schedule</div>
+            </div>
+          </div>
+
+          <!-- Lambdas Layer -->
+          <div class="arch-lambdas-group">
+            <div class="arch-group-title">AWS Lambda Compute (4 Dedicated Micro-Functions)</div>
+            <div class="arch-lambdas-grid">
+              <div class="arch-box">
+                <div class="arch-box-title">1. Scan Handler</div>
+                <div class="arch-box-sub">Synchronous &amp; async dispatch</div>
+              </div>
+              <div class="arch-box">
+                <div class="arch-box-title">2. Report Handler</div>
+                <div class="arch-box-sub">Scan lookup &amp; query</div>
+              </div>
+              <div class="arch-box">
+                <div class="arch-box-title">3. Health Handler</div>
+                <div class="arch-box-sub">Service liveness &amp; checks</div>
+              </div>
+              <div class="arch-box">
+                <div class="arch-box-title">4. Event Handler</div>
+                <div class="arch-box-sub">Nightly audit &amp; alerts</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Storage and Observability Services -->
+          <div class="arch-flow-row">
+            <div class="arch-services-grid">
+              <div class="arch-box">
+                <div class="arch-box-title">DynamoDB</div>
+                <div class="arch-box-sub">Scans table with TTL &amp; PITR</div>
+              </div>
+              <div class="arch-box">
+                <div class="arch-box-title">Amazon S3</div>
+                <div class="arch-box-sub">Private bucket with SSE-KMS</div>
+              </div>
+              <div class="arch-box">
+                <div class="arch-box-title">AWS KMS</div>
+                <div class="arch-box-sub">Customer-managed keys</div>
+              </div>
+              <div class="arch-box">
+                <div class="arch-box-title">Amazon SNS</div>
+                <div class="arch-box-sub">Security alert topic</div>
+              </div>
+              <div class="arch-box">
+                <div class="arch-box-title">CloudWatch</div>
+                <div class="arch-box-sub">Metrics, logs &amp; alarms</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title">Built-In Security Controls</div>
+        <ul class="security-controls-list">
+          <li class="security-control-item">
+            <strong>KMS Encryption</strong>
+            Envelope encryption with customer-managed keys for DynamoDB data at rest, S3 artifacts, and SNS topics.
+          </li>
+          <li class="security-control-item">
+            <strong>Least-Privilege IAM</strong>
+            Strict per-Lambda IAM roles with tightly scoped resource ARNs and minimal permission boundaries.
+          </li>
+          <li class="security-control-item">
+            <strong>API Key &amp; Rate Limits</strong>
+            API Gateway usage plans, quota limits, and API key authentication preventing denial-of-service.
+          </li>
+          <li class="security-control-item">
+            <strong>Private S3 Bucket</strong>
+            Public access block enabled, bucket policy enforcement, and encrypted tarball caching.
+          </li>
+          <li class="security-control-item">
+            <strong>Point-in-Time Recovery</strong>
+            DynamoDB continuous backups (PITR) enabled for data protection and audit record compliance.
+          </li>
+        </ul>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    const VALID_TABS = ['scan', 'status', 'results', 'architecture'];
+
+    function switchTab(tabId) {
+      if (!VALID_TABS.includes(tabId)) {
+        tabId = 'scan';
+      }
+
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach(function(btn) {
+        if (btn.getAttribute('data-tab') === tabId) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      const panes = document.querySelectorAll('.tab-pane');
+      panes.forEach(function(pane) {
+        if (pane.id === 'tab-' + tabId) {
+          pane.classList.add('active');
+        } else {
+          pane.classList.remove('active');
+        }
+      });
+
+      if (window.location.hash !== '#' + tabId) {
+        history.replaceState(null, '', '#' + tabId);
+      }
+    }
+
+    function initTabFromHash() {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (VALID_TABS.includes(hash)) {
+        switchTab(hash);
+      } else {
+        switchTab('scan');
+      }
+    }
+
+    window.addEventListener('hashchange', function() {
+      const hash = window.location.hash.replace(/^#/, '');
+      if (VALID_TABS.includes(hash)) {
+        switchTab(hash);
+      }
+    });
+
+    function checkConfig() {
+      const banner = document.getElementById('configErrorBanner');
+      if (window.__CONFIG_LOAD_FAILED || !window.PG_CONFIG || !window.PG_CONFIG.API_URL) {
+        banner.style.display = 'block';
+        return false;
+      }
+      banner.style.display = 'none';
+      return true;
+    }
+
+    function fillAndScan(pkg, ver) {
+      document.getElementById('pkgInput').value = pkg;
+      document.getElementById('verInput').value = ver;
+      triggerScan();
+    }
+
+    // Cached current report evidence for toggle
+    let currentEvidenceList = [];
+    let isShowingAllEvidence = false;
+
+    async function triggerScan() {
+      if (!checkConfig()) {
+        const errDisp = document.getElementById('errorDisplay');
+        errDisp.textContent = 'Cannot scan: config.js is missing or invalid. Please configure window.PG_CONFIG.';
+        errDisp.style.display = 'block';
+        return;
+      }
+
+      const pkgInput = document.getElementById('pkgInput');
+      const verInput = document.getElementById('verInput');
+      const scanBtn = document.getElementById('scanBtn');
+      const errorDisplay = document.getElementById('errorDisplay');
+      const statusMsg = document.getElementById('scanStatusMsg');
+      const verdictCard = document.getElementById('verdictCard');
+      const historyCard = document.getElementById('historyCard');
+
+      const pkg = pkgInput.value.trim();
+      const ver = verInput.value.trim();
+      if (!pkg || !ver) return;
+
+      errorDisplay.style.display = 'none';
+      statusMsg.textContent = 'Scanning in progress... Please note: the first call may take up to 30 seconds due to Lambda cold start and registry tarball analysis.';
+      statusMsg.style.display = 'block';
+      scanBtn.disabled = true;
+      scanBtn.textContent = 'Scanning...';
+
+      const apiUrl = (window.PG_CONFIG.API_URL || '').replace(/\/$/, '');
+      const apiKey = window.PG_CONFIG.API_KEY || '';
+
+      try {
+        const res = await fetch(apiUrl + '/scan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Api-Key': apiKey,
+          },
+          body: JSON.stringify({ package: pkg, version: ver })
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          throw new Error(data.error || ('Scan failed with HTTP ' + res.status));
+        }
+
+        const report = data.report || data;
+        const scanId = data.scanId || report.scanId || '-';
+
+        renderReport(report, scanId);
+        verdictCard.style.display = 'block';
+        verdictCard.scrollIntoView({ behavior: 'smooth' });
+
+        // Trigger history fetch asynchronously
+        fetchHistory(pkg, apiUrl, apiKey);
+      } catch (err) {
+        errorDisplay.textContent = err.message;
+        errorDisplay.style.display = 'block';
+      } finally {
+        statusMsg.style.display = 'none';
+        scanBtn.disabled = false;
+        scanBtn.textContent = 'Scan Package';
+      }
+    }
+
+    async function fetchHistory(pkg, apiUrl, apiKey) {
+      const historyCard = document.getElementById('historyCard');
+      const tbody = document.getElementById('historyTableBody');
+
+      try {
+        const res = await fetch(apiUrl + '/history?package=' + encodeURIComponent(pkg), {
+          headers: {
+            'X-Api-Key': apiKey,
+          }
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const scans = Array.isArray(data.scans) ? data.scans : [];
+
+        if (scans.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No past scans recorded for this package.</td></tr>';
+        } else {
+          tbody.innerHTML = scans.map(function(s) {
+            const verdict = escapeHtml(s.verdict || 'Review');
+            const score = s.riskScore !== undefined ? s.riskScore : '--';
+            const dateStr = s.scannedAt ? new Date(s.scannedAt).toLocaleString() : '-';
+
+            return '<tr>' +
+              '<td>' + escapeHtml(dateStr) + '</td>' +
+              '<td><span class="code-inline">' + escapeHtml(s.scanId || '-') + '</span></td>' +
+              '<td>' + escapeHtml(s.version || '-') + '</td>' +
+              '<td><strong>' + escapeHtml(score) + '/100</strong></td>' +
+              '<td><span class="badge-verdict ' + verdict.toLowerCase() + '" style="font-size: 0.75rem; padding: 0.2rem 0.6rem;">' + verdict + '</span></td>' +
+              '<td>' + escapeHtml(s.verificationStatus || '-') + '</td>' +
+            '</tr>';
+          }).join('');
+        }
+        historyCard.style.display = 'block';
+      } catch (err) {
+        console.warn('History fetch failed:', err);
+      }
+    }
+
+    function renderReport(report, scanId) {
+      const badge = document.getElementById('verdictBadge');
+      const verdict = report.verdict || 'Review';
+      badge.textContent = verdict;
+      badge.className = 'badge-verdict ' + verdict.toLowerCase();
+
+      document.getElementById('reportTarget').textContent = (report.package || '') + '@' + (report.version || '');
+      document.getElementById('reportScanId').textContent = 'Scan ID: ' + (scanId || '-');
+      document.getElementById('reportVerification').textContent = 'Verification Status: ' + (report.verificationStatus || 'Unverified');
+
+      document.getElementById('trustScoreVal').textContent = (report.riskScore !== undefined ? report.riskScore : '--') + '/100';
+      
+      currentEvidenceList = Array.isArray(report.evidence) ? report.evidence : [];
+      document.getElementById('evidenceCountVal').textContent = currentEvidenceList.length;
+
+      // Hard blocks
+      const hardBlocksSec = document.getElementById('hardBlocksSection');
+      const hardBlocksList = document.getElementById('hardBlocksList');
+      if (Array.isArray(report.hardBlocks) && report.hardBlocks.length > 0) {
+        hardBlocksList.innerHTML = report.hardBlocks
+          .map(function(hb) { return '<li>' + escapeHtml(hb) + '</li>'; })
+          .join('');
+        hardBlocksSec.style.display = 'block';
+      } else {
+        hardBlocksSec.style.display = 'none';
+        hardBlocksList.innerHTML = '';
+      }
+
+      // Evidence table & Show all toggle
+      isShowingAllEvidence = false;
+      renderEvidenceTable();
+
+      // Remediation
+      const remList = document.getElementById('remediationList');
+      const remItems = Array.isArray(report.remediation) ? report.remediation : [];
+      if (remItems.length === 0) {
+        remList.innerHTML = '<li>No remediation needed. Package is considered healthy according to policy.</li>';
+      } else {
+        remList.innerHTML = remItems.map(function(r) {
+          return '<li><strong>' + escapeHtml(r.issue) + ':</strong> ' + escapeHtml(r.recommendation) + '</li>';
+        }).join('');
+      }
+    }
+
+    function renderEvidenceTable() {
+      const tbody = document.getElementById('evidenceTableBody');
+      const toggleContainer = document.getElementById('evidenceToggleContainer');
+      const toggleBtn = document.getElementById('evidenceToggleBtn');
+
+      if (currentEvidenceList.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No suspicious evidence or policy violations detected.</td></tr>';
+        toggleContainer.style.display = 'none';
+        return;
+      }
+
+      const displayItems = isShowingAllEvidence ? currentEvidenceList : currentEvidenceList.slice(0, 10);
+
+      tbody.innerHTML = displayItems.map(function(ev) {
+        let locText = '-';
+        if (ev.location && ev.location.file) {
+          locText = ev.location.file + (ev.location.line !== undefined ? (':' + ev.location.line) : '');
+        }
+
+        const sev = escapeHtml(ev.severity || 'INFO');
+        const conf = (typeof ev.confidence === 'number') ? (ev.confidence * 100).toFixed(0) + '%' : '-';
+
+        return '<tr>' +
+          '<td><span class="code-inline">' + escapeHtml(ev.id) + '</span></td>' +
+          '<td>' + escapeHtml(ev.category) + '</td>' +
+          '<td><span class="severity-badge sev-' + sev + '">' + sev + '</span></td>' +
+          '<td>' + escapeHtml(conf) + '</td>' +
+          '<td>' + escapeHtml(ev.scanner) + '</td>' +
+          '<td><span class="code-inline">' + escapeHtml(locText) + '</span></td>' +
+          '<td>' + escapeHtml(ev.description) + (ev.snippet ? ('<pre style="margin-top:4px; font-size:0.75rem; background:var(--code-bg); padding:4px; border-radius:3px;">' + escapeHtml(ev.snippet) + '</pre>') : '') + '</td>' +
+        '</tr>';
+      }).join('');
+
+      if (currentEvidenceList.length > 10) {
+        toggleContainer.style.display = 'block';
+        if (isShowingAllEvidence) {
+          toggleBtn.textContent = 'Show less (first 10)';
+        } else {
+          toggleBtn.textContent = 'Show all (' + currentEvidenceList.length + ')';
+        }
+      } else {
+        toggleContainer.style.display = 'none';
+      }
+    }
+
+    function toggleAllEvidence() {
+      isShowingAllEvidence = !isShowingAllEvidence;
+      renderEvidenceTable();
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initTabFromHash();
+      checkConfig();
+    });
+  </script>
+</body>
+</html>

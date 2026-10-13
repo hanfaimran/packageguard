@@ -38,3 +38,9 @@ output "alerts_topic_arn" {
   description = "ARN of the SNS alerts topic"
   value       = aws_sns_topic.alerts.arn
 }
+
+output "dashboard_url" {
+  description = "HTTPS URL of the hosted web dashboard on CloudFront"
+  value       = module.web.dashboard_url
+}
+

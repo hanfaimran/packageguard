@@ -112,3 +112,17 @@ module "api" {
   get_history_function_name = module.lambda.get_history_function_name
   tags                      = local.common_tags
 }
+
+# ---------------------------------------------------------------------------
+# 6. Web Module (CloudFront CDN + S3 Hosted Web Dashboard)
+# ---------------------------------------------------------------------------
+module "web" {
+  source = "./modules/web"
+
+  project_name    = var.project_name
+  api_invoke_url  = module.api.invoke_url
+  api_key_value   = module.api.api_key_value
+  index_html_path = "${path.root}/../web/index.html"
+  tags            = local.common_tags
+}
+
