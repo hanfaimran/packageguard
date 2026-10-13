@@ -3,12 +3,58 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { scanFromRegistry } from '@packageguard/core';
+import { scanFromRegistry, parsePackageLock } from '@packageguard/core';
 import { generateAllFixtures } from './fixtures/generator.js';
 import { FakeRegistryServer } from './fake-registry.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const MAX_LOCKFILE_BYTES = 2 * 1024 * 1024; // 2 MB
+const MAX_PACKAGES = 50;
+const CONCURRENCY = 5;
+
+/** Read the full request body with a per-byte cap. */
+function readBody(req: http.IncomingMessage, maxBytes: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    let size = 0;
+
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > maxBytes) {
+        req.destroy();
+        reject(new Error('PAYLOAD_TOO_LARGE'));
+        return;
+      }
+      body += chunk.toString('utf-8');
+    });
+
+    req.on('end', () => resolve(body));
+    req.on('error', reject);
+  });
+}
+
+/** Run at most `concurrency` promises at a time. */
+async function pMap<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency: number,
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let index = 0;
+
+  async function worker() {
+    while (index < items.length) {
+      const i = index++;
+      results[i] = await fn(items[i]);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, worker);
+  await Promise.all(workers);
+  return results;
+}
 
 async function main(): Promise<void> {
   const { publicKey, privateKey } = crypto.generateKeyPairSync('ec', {
@@ -124,6 +170,93 @@ async function main(): Promise<void> {
         }
       });
       return;
+    }
+
+    // -----------------------------------------------------------------------
+    // POST /api/scan-lockfile
+    // Accepts raw package-lock.json text (up to 2 MB), parses it, and scans
+    // each unique package@version against the real npm registry (not fake),
+    // at most 5 at a time, capped at 50 packages.
+    // Returns: { total, scanned, results: Array<{ package, version, verdict, riskScore, hardBlocks } | { package, version, error }> }
+    // -----------------------------------------------------------------------
+    if (req.method === 'POST' && url.pathname === '/api/scan-lockfile') {
+      let rawBody: string;
+      try {
+        rawBody = await readBody(req, MAX_LOCKFILE_BYTES);
+      } catch (err) {
+        if (!res.headersSent) {
+          if ((err as Error).message === 'PAYLOAD_TOO_LARGE') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            return res.end(JSON.stringify({ error: 'Lockfile exceeds 2 MB limit' }));
+          }
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          return res.end(JSON.stringify({ error: (err as Error).message }));
+        }
+        return;
+      }
+
+      if (!rawBody.trim()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'Request body must not be empty' }));
+      }
+
+      let packages: { name: string; version: string }[];
+      try {
+        const parsed = parsePackageLock(rawBody);
+        // Deduplicate by name@version
+        const seen = new Set<string>();
+        packages = [];
+        for (const p of parsed) {
+          const key = `${p.name}@${p.version}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            packages.push({ name: p.name, version: p.version });
+          }
+        }
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: (err as Error).message }));
+      }
+
+      const total = packages.length;
+      // Cap at MAX_PACKAGES
+      const capped = packages.slice(0, MAX_PACKAGES);
+
+      // Scan against the real npm registry (not the fake one) with no trusted keys
+      const results = await pMap(
+        capped,
+        async (pkg) => {
+          try {
+            const report = await scanFromRegistry(pkg.name, pkg.version, {
+              registryUrl: 'https://registry.npmjs.org',
+            });
+            return {
+              package: pkg.name,
+              version: pkg.version,
+              verdict: report.verdict,
+              riskScore: report.riskScore,
+              hardBlocks: report.hardBlocks,
+            };
+          } catch (err) {
+            return {
+              package: pkg.name,
+              version: pkg.version,
+              error: (err as Error).message || String(err),
+            };
+          }
+        },
+        CONCURRENCY,
+      );
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(
+        JSON.stringify({
+          total,
+          scanned: capped.length,
+          capped: total > MAX_PACKAGES,
+          results,
+        }),
+      );
     }
 
     res.writeHead(404, { 'Content-Type': 'text/plain' });
