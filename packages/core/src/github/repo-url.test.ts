@@ -12,7 +12,10 @@ describe('parseGithubRepoUrl', () => {
   it('handles .git suffix, trailing slash and extra path', () => {
     expect(parseGithubRepoUrl('https://github.com/a/b.git')).toEqual({ owner: 'a', repo: 'b' });
     expect(parseGithubRepoUrl('https://github.com/a/b/')).toEqual({ owner: 'a', repo: 'b' });
-    expect(parseGithubRepoUrl('https://github.com/a/b/tree/main/src')).toEqual({ owner: 'a', repo: 'b' });
+    expect(parseGithubRepoUrl('https://github.com/a/b/tree/main/src')).toEqual({
+      owner: 'a',
+      repo: 'b',
+    });
   });
 
   it('rejects other hosts, http and embedded credentials', () => {

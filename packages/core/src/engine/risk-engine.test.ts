@@ -122,29 +122,38 @@ describe('RiskEngine and Report Renderers', () => {
       },
     ];
 
-    const report = engine.evaluate('evil-pkg', '1.0.1', evidence, 'PartiallyVerified', ['Custom policy ban']);
+    const report = engine.evaluate('evil-pkg', '1.0.1', evidence, 'PartiallyVerified', [
+      'Custom policy ban',
+    ]);
     expect(report.verdict).toBe('Block');
     expect(report.hardBlocks.some((h) => h.includes('Critical vulnerability'))).toBe(true);
-    expect(report.hardBlocks.some((h) => h.includes('Correlated credential exfiltration'))).toBe(true);
+    expect(report.hardBlocks.some((h) => h.includes('Correlated credential exfiltration'))).toBe(
+      true,
+    );
     expect(report.hardBlocks.some((h) => h.includes('Custom policy ban'))).toBe(true);
     expect(report.remediation.length).toBeGreaterThanOrEqual(3);
   });
 
   it('renders terminal text with policy violations, breakdowns, snippets, and sources', () => {
-    const report = engine.evaluate('full-pkg', '1.0.0', [
-      {
-        id: 'ev-1',
-        scanner: 'MetadataScanner',
-        category: 'metadata',
-        severity: 'MEDIUM',
-        confidence: 0.8,
-        description: 'Script present',
-        dedupKey: 'key-1',
-        location: { file: 'package.json', line: 12 },
-        snippet: '"postinstall": "node setup.js"',
-        sources: ['MetadataScanner', 'VersionDiffScanner'],
-      },
-    ], 'Verified');
+    const report = engine.evaluate(
+      'full-pkg',
+      '1.0.0',
+      [
+        {
+          id: 'ev-1',
+          scanner: 'MetadataScanner',
+          category: 'metadata',
+          severity: 'MEDIUM',
+          confidence: 0.8,
+          description: 'Script present',
+          dedupKey: 'key-1',
+          location: { file: 'package.json', line: 12 },
+          snippet: '"postinstall": "node setup.js"',
+          sources: ['MetadataScanner', 'VersionDiffScanner'],
+        },
+      ],
+      'Verified',
+    );
 
     report.policyApplied = {
       name: 'strict',

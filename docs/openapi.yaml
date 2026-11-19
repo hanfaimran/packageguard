@@ -70,7 +70,7 @@ paths:
           schema:
             type: string
             format: uuid
-            example: "123e4567-e89b-12d3-a456-426614174000"
+            example: '123e4567-e89b-12d3-a456-426614174000'
       responses:
         '200':
           description: Report retrieved successfully
@@ -110,7 +110,7 @@ paths:
           description: The npm package name to retrieve scan history for
           schema:
             type: string
-            example: "lodash"
+            example: 'lodash'
       responses:
         '200':
           description: Scan history list retrieved
@@ -149,15 +149,15 @@ components:
         package:
           type: string
           description: Name of the npm package (plain or scoped)
-          example: "lodash"
+          example: 'lodash'
         version:
           type: string
           description: Semver version string
-          example: "4.17.21"
+          example: '4.17.21'
         registryUrl:
           type: string
           description: Optional custom npm registry URL
-          example: "https://registry.npmjs.org"
+          example: 'https://registry.npmjs.org'
 
     ScanResponse:
       type: object
@@ -168,7 +168,7 @@ components:
         scanId:
           type: string
           format: uuid
-          example: "8b7e28b1-3829-4d69-9599-2a94fb001f3e"
+          example: '8b7e28b1-3829-4d69-9599-2a94fb001f3e'
         report:
           $ref: '#/components/schemas/Report'
 
@@ -340,7 +340,8 @@ components:
           type: string
         category:
           type: string
-          enum: [metadata, vulnerability, integrity, typosquat, static-analysis, version-diff, policy]
+          enum:
+            [metadata, vulnerability, integrity, typosquat, static-analysis, version-diff, policy]
         severity:
           type: string
           enum: [INFO, LOW, MEDIUM, HIGH, CRITICAL]
@@ -369,4 +370,4 @@ components:
       properties:
         error:
           type: string
-          example: "Invalid package name format"
+          example: 'Invalid package name format'

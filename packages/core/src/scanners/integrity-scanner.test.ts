@@ -81,7 +81,10 @@ describe('IntegrityScanner', () => {
 
   it('detects tarball digest mismatch and explicitly reports expected vs actual => Unverified with CRITICAL evidence', async () => {
     const tamperedBytes = Buffer.from('console.log("tampered payload!");');
-    const expectedHash = crypto.createHash('sha512').update(Buffer.from('original')).digest('base64');
+    const expectedHash = crypto
+      .createHash('sha512')
+      .update(Buffer.from('original'))
+      .digest('base64');
     const expectedDigest = `sha512-${expectedHash}`;
 
     const scanner = new IntegrityScanner({});

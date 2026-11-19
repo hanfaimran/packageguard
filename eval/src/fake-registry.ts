@@ -48,9 +48,10 @@ export class FakeRegistryServer {
 
     // Start from the latest fixture's packageDocument for top-level fields
     // (name, repository, description, etc.)
-    const base = JSON.parse(
-      JSON.stringify(latestFixture.packageDocument),
-    ) as Record<string, unknown>;
+    const base = JSON.parse(JSON.stringify(latestFixture.packageDocument)) as Record<
+      string,
+      unknown
+    >;
 
     // Build merged versions and time from ALL fixture packageDocuments
     const mergedVersions: Record<string, unknown> = {};

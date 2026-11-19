@@ -27,7 +27,9 @@ describe('MetadataScanner & RegistryClient', () => {
     const doc = await client.getPackageDocument('@scope/pkg');
     expect(doc.name).toBe('@scope/pkg');
 
-    const tarballBytes = await client.downloadTarball('https://registry.npmjs.org/@scope/pkg/-/pkg-1.0.0.tgz');
+    const tarballBytes = await client.downloadTarball(
+      'https://registry.npmjs.org/@scope/pkg/-/pkg-1.0.0.tgz',
+    );
     expect(tarballBytes.length).toBe(3);
   });
 
@@ -39,8 +41,12 @@ describe('MetadataScanner & RegistryClient', () => {
     } as any);
 
     const client = new RegistryClient();
-    await expect(client.getPackageDocument('missing-pkg')).rejects.toThrow('Failed to fetch package metadata');
-    await expect(client.downloadTarball('https://invalid.url')).rejects.toThrow('Failed to download tarball');
+    await expect(client.getPackageDocument('missing-pkg')).rejects.toThrow(
+      'Failed to fetch package metadata',
+    );
+    await expect(client.downloadTarball('https://invalid.url')).rejects.toThrow(
+      'Failed to download tarball',
+    );
   });
 
   it('MetadataScanner returns empty evidence if no registry metadata provided', async () => {

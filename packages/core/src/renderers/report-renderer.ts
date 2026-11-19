@@ -8,11 +8,7 @@ export function renderTerminalReport(report: Report): string {
   const lines: string[] = [];
 
   const verdictBadge =
-    report.verdict === 'Safe'
-      ? '[SAFE]'
-      : report.verdict === 'Block'
-        ? '[BLOCK]'
-        : '[REVIEW]';
+    report.verdict === 'Safe' ? '[SAFE]' : report.verdict === 'Block' ? '[BLOCK]' : '[REVIEW]';
 
   lines.push('================================================================');
   lines.push(`PACKAGEGUARD TRUST REPORT: ${report.package}@${report.version}`);
@@ -48,7 +44,9 @@ export function renderTerminalReport(report: Report): string {
   if (report.evidence.length > 0) {
     lines.push(`\nEVIDENCE ITEMS (${report.evidence.length}):`);
     for (const ev of report.evidence) {
-      const loc = ev.location ? ` (${ev.location.file}${ev.location.line ? `:${ev.location.line}` : ''})` : '';
+      const loc = ev.location
+        ? ` (${ev.location.file}${ev.location.line ? `:${ev.location.line}` : ''})`
+        : '';
       lines.push(`  * [${ev.severity}] [${ev.category}] ${ev.description}${loc}`);
       if (ev.snippet) {
         lines.push(`      Snippet: ${ev.snippet}`);

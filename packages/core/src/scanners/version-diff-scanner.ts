@@ -29,7 +29,7 @@ export class VersionDiffScanner implements Scanner {
     const prevFileMap = new Map<string, ExtractedFile>(previousFiles.map((f) => [f.path, f]));
     const currFileMap = new Map<string, ExtractedFile>(currentFiles.map((f) => [f.path, f]));
 
-        // 1. Publisher / maintainer change comparison
+    // 1. Publisher / maintainer change comparison
     const currMeta = ctx.registryMetadata;
     const prevMeta = ctx.previousVersionMetadata;
     if (currMeta && prevMeta) {
@@ -38,7 +38,9 @@ export class VersionDiffScanner implements Scanner {
       const prevKeys = Object.keys(prevVersions);
       const currPublisher = currVersions[ctx.version]?._npmUser?.name as string | undefined;
       const prevPublisher =
-        prevKeys.length === 1 ? (prevVersions[prevKeys[0]]?._npmUser?.name as string | undefined) : undefined;
+        prevKeys.length === 1
+          ? (prevVersions[prevKeys[0]]?._npmUser?.name as string | undefined)
+          : undefined;
 
       if (currPublisher && prevPublisher) {
         // Real registries: compare who actually published each version
@@ -80,11 +82,12 @@ export class VersionDiffScanner implements Scanner {
     }
 
     // 2. Lifecycle install script changes / additions
-    const currVersionDoc = ((currMeta?.versions as Record<string, any>)?.[ctx.version] || currMeta) as any;
+    const currVersionDoc = ((currMeta?.versions as Record<string, any>)?.[ctx.version] ||
+      currMeta) as any;
     const prevVersionKey = Object.keys((prevMeta?.versions as Record<string, any>) || {})[0];
-    const prevVersionDoc = (prevVersionKey
-      ? (prevMeta?.versions as Record<string, any>)?.[prevVersionKey]
-      : prevMeta) as any;
+    const prevVersionDoc = (
+      prevVersionKey ? (prevMeta?.versions as Record<string, any>)?.[prevVersionKey] : prevMeta
+    ) as any;
 
     const currScripts: Record<string, string> = currVersionDoc?.scripts || {};
     const prevScripts: Record<string, string> = prevVersionDoc?.scripts || {};
@@ -174,7 +177,9 @@ export class VersionDiffScanner implements Scanner {
       for (const ev of staticDiffEvidence) {
         const fileRef = ev.location?.file || 'file';
         const isAdded = addedPaths.has(fileRef);
-        const prefix = isAdded ? `new file ${fileRef} in ${ctx.version}` : `modified file ${fileRef} in ${ctx.version}`;
+        const prefix = isAdded
+          ? `new file ${fileRef} in ${ctx.version}`
+          : `modified file ${fileRef} in ${ctx.version}`;
         evidence.push({
           ...ev,
           id: `diff-${ev.id}`,

@@ -110,10 +110,26 @@ async function bundle() {
   console.log('Bundling Lambda handlers with esbuild...');
 
   const handlers = [
-    { name: 'post-scan', entry: path.resolve(__dirname, 'src/scan-handlers.ts'), exportName: 'postScanHandler' },
-    { name: 'get-scan', entry: path.resolve(__dirname, 'src/scan-handlers.ts'), exportName: 'getScanByIdHandler' },
-    { name: 'get-history', entry: path.resolve(__dirname, 'src/history-and-scheduled-handlers.ts'), exportName: 'getHistoryHandler' },
-    { name: 'nightly-rescan', entry: path.resolve(__dirname, 'src/history-and-scheduled-handlers.ts'), exportName: 'nightlyRescanHandler' },
+    {
+      name: 'post-scan',
+      entry: path.resolve(__dirname, 'src/scan-handlers.ts'),
+      exportName: 'postScanHandler',
+    },
+    {
+      name: 'get-scan',
+      entry: path.resolve(__dirname, 'src/scan-handlers.ts'),
+      exportName: 'getScanByIdHandler',
+    },
+    {
+      name: 'get-history',
+      entry: path.resolve(__dirname, 'src/history-and-scheduled-handlers.ts'),
+      exportName: 'getHistoryHandler',
+    },
+    {
+      name: 'nightly-rescan',
+      entry: path.resolve(__dirname, 'src/history-and-scheduled-handlers.ts'),
+      exportName: 'nightlyRescanHandler',
+    },
   ];
 
   for (const h of handlers) {
@@ -136,9 +152,7 @@ async function bundle() {
       format: 'cjs',
       outfile: outJs,
       sourcemap: true,
-      external: [
-        '@aws-sdk/*',
-      ],
+      external: ['@aws-sdk/*'],
     });
 
     // Create zip

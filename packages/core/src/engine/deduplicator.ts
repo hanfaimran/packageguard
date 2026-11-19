@@ -24,7 +24,9 @@ export function deduplicateEvidence(evidenceList: Evidence[]): Evidence[] {
     }
 
     // Existing entry found: merge sources
-    const mergedSources = Array.from(new Set([...(existing.sources || [existing.scanner]), item.scanner]));
+    const mergedSources = Array.from(
+      new Set([...(existing.sources || [existing.scanner]), item.scanner]),
+    );
 
     // Determine higher severity
     const existingWeight = SEVERITY_WEIGHTS[existing.severity] || 0;

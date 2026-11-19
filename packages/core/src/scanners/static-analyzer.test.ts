@@ -129,6 +129,10 @@ describe('StaticAnalyzer & TarballExtractor', () => {
     };
 
     const evidence = await scanner.collect(ctx);
-    expect(evidence.some((e) => e.description.includes('pipes remote curl/wget download directly to shell'))).toBe(true);
+    expect(
+      evidence.some((e) =>
+        e.description.includes('pipes remote curl/wget download directly to shell'),
+      ),
+    ).toBe(true);
   });
 });

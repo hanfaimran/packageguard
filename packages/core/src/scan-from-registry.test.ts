@@ -49,7 +49,9 @@ describe('scanFromRegistry', () => {
     expect(report.version).toBe('1.0.1');
     expect(report.hardBlocks.length).toBeGreaterThan(0);
     expect(
-      report.hardBlocks.some((h) => h.includes('Correlated credential exfiltration detected in package')),
+      report.hardBlocks.some((h) =>
+        h.includes('Correlated credential exfiltration detected in package'),
+      ),
     ).toBe(true);
 
     const staticEv = report.evidence.find(

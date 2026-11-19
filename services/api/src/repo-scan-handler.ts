@@ -28,7 +28,9 @@ export async function postScanRepoHandler(
     }
 
     if (typeof parsed.repoUrl !== 'string' || !parsed.repoUrl.trim()) {
-      return jsonResponse(400, { error: 'Field "repoUrl" is required, e.g. https://github.com/owner/repo' });
+      return jsonResponse(400, {
+        error: 'Field "repoUrl" is required, e.g. https://github.com/owner/repo',
+      });
     }
 
     let ref: GithubRepoRef;

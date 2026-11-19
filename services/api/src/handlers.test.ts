@@ -1,7 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { APIGatewayProxyEvent } from 'aws-lambda';
 import { mockClient } from 'aws-sdk-client-mock';
-import { DynamoDBDocumentClient, PutCommand, GetCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  PutCommand,
+  GetCommand,
+  QueryCommand,
+  ScanCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 
@@ -333,7 +339,9 @@ describe('PackageGuard Lambda Handlers', () => {
       expect(snsMock.calls()).toHaveLength(1);
       const snsInput = snsMock.call(0).args[0].input;
       expect(snsInput.TopicArn).toBe('arn:aws:sns:us-east-1:123456789012:packageguard-alerts');
-      expect(snsInput.Subject).toContain('Security Degradation: event-stream-lite@1.0.1 is now Block');
+      expect(snsInput.Subject).toContain(
+        'Security Degradation: event-stream-lite@1.0.1 is now Block',
+      );
       expect(snsInput.Message).toContain('SECURITY ALERT');
     });
 

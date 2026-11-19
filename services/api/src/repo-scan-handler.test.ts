@@ -61,7 +61,9 @@ describe('postScanRepoHandler', () => {
   });
 
   it('returns a clear error when the repo has no lockfile', async () => {
-    mockFetchLockfile.mockRejectedValue(new Error('No package-lock.json found in this repository.'));
+    mockFetchLockfile.mockRejectedValue(
+      new Error('No package-lock.json found in this repository.'),
+    );
     const res = await postScanRepoHandler(event({ repoUrl: 'https://github.com/o/r' }));
     expect(res.statusCode).toBe(400);
     expect(JSON.parse(res.body).error).toMatch(/package-lock\.json/);

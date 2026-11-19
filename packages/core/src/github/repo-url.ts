@@ -14,7 +14,12 @@ export function parseGithubRepoUrl(input: string): GithubRepoRef {
     throw new Error('Enter a full GitHub URL, e.g. https://github.com/owner/repo');
   }
 
-  if (url.protocol !== 'https:' || !GITHUB_HOSTS.has(url.hostname) || url.username || url.password) {
+  if (
+    url.protocol !== 'https:' ||
+    !GITHUB_HOSTS.has(url.hostname) ||
+    url.username ||
+    url.password
+  ) {
     throw new Error('Only https://github.com URLs are supported');
   }
 

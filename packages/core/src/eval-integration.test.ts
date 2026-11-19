@@ -111,7 +111,9 @@ describe('End-to-End Evaluation Integration Test', () => {
     expect(report.verdict).toBe('Block');
     expect(report.hardBlocks.length).toBeGreaterThan(0);
     expect(
-      report.hardBlocks.some((h) => h.includes('Correlated credential exfiltration detected in package')),
+      report.hardBlocks.some((h) =>
+        h.includes('Correlated credential exfiltration detected in package'),
+      ),
     ).toBe(true);
 
     const staticEv = report.evidence.find(
@@ -122,7 +124,9 @@ describe('End-to-End Evaluation Integration Test', () => {
     expect(staticEv?.location?.line).toBeGreaterThanOrEqual(1);
 
     expect(report.evidence.some((e) => e.dedupKey === 'lifecycle:script:postinstall')).toBe(true);
-    expect(report.evidence.some((e) => e.dedupKey.startsWith('version-diff:maintainer:added'))).toBe(true);
+    expect(
+      report.evidence.some((e) => e.dedupKey.startsWith('version-diff:maintainer:added')),
+    ).toBe(true);
   });
 
   it('proves hard-negative benign-base64@1.0.0 is NOT Blocked and receives Safe verdict', async () => {

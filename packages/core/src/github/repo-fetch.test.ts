@@ -21,15 +21,21 @@ describe('fetchRepoLockfile', () => {
   });
 
   it('explains a missing lockfile', async () => {
-    await expect(fetchRepoLockfile(ref, { fetchImpl: fakeFetch(404) })).rejects.toThrow(/package-lock\.json/);
+    await expect(fetchRepoLockfile(ref, { fetchImpl: fakeFetch(404) })).rejects.toThrow(
+      /package-lock\.json/,
+    );
   });
 
   it('reports rate limiting', async () => {
-    await expect(fetchRepoLockfile(ref, { fetchImpl: fakeFetch(403) })).rejects.toThrow(/rate limit/i);
+    await expect(fetchRepoLockfile(ref, { fetchImpl: fakeFetch(403) })).rejects.toThrow(
+      /rate limit/i,
+    );
   });
 
   it('rejects oversized lockfiles', async () => {
     const big = 'x'.repeat(MAX_LOCKFILE_BYTES + 1);
-    await expect(fetchRepoLockfile(ref, { fetchImpl: fakeFetch(200, big) })).rejects.toThrow(/2 MB/);
+    await expect(fetchRepoLockfile(ref, { fetchImpl: fakeFetch(200, big) })).rejects.toThrow(
+      /2 MB/,
+    );
   });
 });

@@ -51,7 +51,9 @@ export class PolicyEngine {
 
     // 1. Min score requirement
     if (typeof this.policy.minScore === 'number' && riskScore < this.policy.minScore) {
-      violations.push(`Risk score ${riskScore} is below policy minimum required score of ${this.policy.minScore}`);
+      violations.push(
+        `Risk score ${riskScore} is below policy minimum required score of ${this.policy.minScore}`,
+      );
     }
 
     // 2. Minimum verification status
@@ -68,13 +70,17 @@ export class PolicyEngine {
         violations.push(
           `Verification status '${verificationStatus}' does not meet required minimum '${this.policy.minVerificationStatus}'`,
         );
-        hardBlocks.push(`Policy requires minimum verification status: ${this.policy.minVerificationStatus}`);
+        hardBlocks.push(
+          `Policy requires minimum verification status: ${this.policy.minVerificationStatus}`,
+        );
       }
     }
 
     // 3. Require Provenance (Sigstore)
     if (this.policy.requireProvenance && verificationStatus !== 'Verified') {
-      violations.push(`Cryptographic package provenance attestation is required by policy but not verified`);
+      violations.push(
+        `Cryptographic package provenance attestation is required by policy but not verified`,
+      );
       hardBlocks.push('Policy requires verified provenance attestation');
     }
 
@@ -82,7 +88,9 @@ export class PolicyEngine {
     if (this.policy.banInstallScripts) {
       const scriptEv = evidenceList.find((e) => e.dedupKey.startsWith('lifecycle:script:'));
       if (scriptEv) {
-        violations.push(`Policy strictly bans packages with install scripts: ${scriptEv.description}`);
+        violations.push(
+          `Policy strictly bans packages with install scripts: ${scriptEv.description}`,
+        );
         hardBlocks.push(`Policy violation: install scripts are disallowed in this environment`);
       }
     }

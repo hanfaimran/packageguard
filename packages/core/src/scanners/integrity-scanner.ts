@@ -52,7 +52,8 @@ export class IntegrityScanner implements Scanner {
     const hash = crypto.createHash('sha512').update(ctx.tarballBytes).digest('base64');
     const computedDigest = `sha512-${hash}`;
 
-    const versionDoc = (ctx.registryMetadata?.versions as Record<string, any>)?.[ctx.version] ||
+    const versionDoc =
+      (ctx.registryMetadata?.versions as Record<string, any>)?.[ctx.version] ||
       (ctx.registryMetadata as any);
     const expectedDigest: string | undefined = versionDoc?.dist?.integrity;
 
@@ -158,7 +159,12 @@ export class IntegrityScanner implements Scanner {
     // Unverified: hash mismatch or signature invalid (or missing tarball)
     let status: VerificationStatus;
 
-    if (!hashMatch || (signatureTested && !signatureValid && signatures.some((s) => Boolean(this.trustedPublicKeys[s.keyid])))) {
+    if (
+      !hashMatch ||
+      (signatureTested &&
+        !signatureValid &&
+        signatures.some((s) => Boolean(this.trustedPublicKeys[s.keyid])))
+    ) {
       status = 'Unverified';
     } else if (hashMatch && signatureValid && provenanceVerified) {
       status = 'Verified';

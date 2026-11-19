@@ -32,7 +32,7 @@ describe('TyposquatScanner', () => {
     const evidence = await scanner.collect(ctx);
     expect(evidence.length).toBe(1);
     expect(evidence[0].category).toBe('typosquat');
-    expect(evidence[0].description).toContain('adjacent character swap from \'lodash\'');
+    expect(evidence[0].description).toContain("adjacent character swap from 'lodash'");
     // Without corroborating signals, confidence remains low (0.5) and severity LOW
     expect(evidence[0].confidence).toBe(0.5);
     expect(evidence[0].severity).toBe('LOW');

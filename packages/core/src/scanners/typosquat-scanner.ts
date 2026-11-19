@@ -2,16 +2,16 @@ import type { Scanner, ScanContext, Evidence } from '../types.js';
 
 // Common visual homoglyphs
 const HOMOGLYPH_MAP: Record<string, string[]> = {
-  'o': ['0', 'O'],
+  o: ['0', 'O'],
   '0': ['o', 'O'],
-  'l': ['1', 'I', 'i'],
+  l: ['1', 'I', 'i'],
   '1': ['l', 'I', 'i'],
-  'i': ['1', 'l', 'I'],
-  'm': ['rn', 'nn'],
-  'w': ['vv'],
-  'v': ['u'],
-  'u': ['v'],
-  'c': ['e'],
+  i: ['1', 'l', 'I'],
+  m: ['rn', 'nn'],
+  w: ['vv'],
+  v: ['u'],
+  u: ['v'],
+  c: ['e'],
 };
 
 export function levenshteinDistance(a: string, b: string): number {
@@ -147,10 +147,15 @@ export class TyposquatScanner implements Scanner {
         let baseConfidence = 0.5; // low initial confidence
         const signals: string[] = [];
 
-        const versionDoc = (ctx.registryMetadata?.versions as Record<string, any>)?.[ctx.version] ||
+        const versionDoc =
+          (ctx.registryMetadata?.versions as Record<string, any>)?.[ctx.version] ||
           (ctx.registryMetadata as any);
 
-        if (versionDoc?.scripts?.install || versionDoc?.scripts?.postinstall || versionDoc?.scripts?.preinstall) {
+        if (
+          versionDoc?.scripts?.install ||
+          versionDoc?.scripts?.postinstall ||
+          versionDoc?.scripts?.preinstall
+        ) {
           signals.push('contains lifecycle install script');
           baseConfidence += 0.2;
         }
@@ -168,9 +173,10 @@ export class TyposquatScanner implements Scanner {
         }
 
         const confidence = Math.round(Math.min(0.9, baseConfidence) * 100) / 100;
-        const explanation = signals.length > 0
-          ? `Suspicious package name: ${reason}. Corroborating signals: ${signals.join(', ')}.`
-          : `Suspicious package name: ${reason}. Note: confidence is kept low without corroborating signals (install scripts, new package).`;
+        const explanation =
+          signals.length > 0
+            ? `Suspicious package name: ${reason}. Corroborating signals: ${signals.join(', ')}.`
+            : `Suspicious package name: ${reason}. Note: confidence is kept low without corroborating signals (install scripts, new package).`;
 
         evidence.push({
           id: `typosquat-${topPkg}`,

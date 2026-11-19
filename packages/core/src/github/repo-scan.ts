@@ -91,7 +91,8 @@ export async function scanRepoDependencies(
     counts.Block > 0 ? 'Block' : counts.Review > 0 || counts.Error > 0 ? 'Review' : 'Safe';
 
   items.sort(
-    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (a.riskScore ?? 0) - (b.riskScore ?? 0),
+    (a, b) =>
+      STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (a.riskScore ?? 0) - (b.riskScore ?? 0),
   );
 
   return {

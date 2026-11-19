@@ -146,7 +146,10 @@ async function main(): Promise<void> {
           return res.end(JSON.stringify({ error: 'Missing package or version fields' }));
         }
 
-        const { package: pkgName, version: pkgVer } = parsed as { package: string; version: string };
+        const { package: pkgName, version: pkgVer } = parsed as {
+          package: string;
+          version: string;
+        };
 
         try {
           const report = await scanFromRegistry(pkgName.trim(), pkgVer.trim(), {

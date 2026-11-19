@@ -12,7 +12,11 @@ export class VulnScanner implements Scanner {
 
     // 1. Direct package vulnerability query
     try {
-      const directVulns = await this.osvClient.queryPackage(ctx.packageName, ctx.version, ctx.ecosystem);
+      const directVulns = await this.osvClient.queryPackage(
+        ctx.packageName,
+        ctx.version,
+        ctx.ecosystem,
+      );
       for (const vuln of directVulns) {
         const severity = normalizeOsvSeverity(vuln);
         evidence.push({

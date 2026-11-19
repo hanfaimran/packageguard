@@ -40,7 +40,10 @@ export function validatePackageInput(pkg: unknown, version: unknown): Validation
   return { valid: true };
 }
 
-export function validateBodySize(body: string | null | undefined, maxBytes = 32768): ValidationResult {
+export function validateBodySize(
+  body: string | null | undefined,
+  maxBytes = 32768,
+): ValidationResult {
   if (!body) {
     return { valid: false, error: 'Request body must not be empty' };
   }
@@ -54,7 +57,10 @@ export function validateBodySize(body: string | null | undefined, maxBytes = 327
   return { valid: true };
 }
 
-export function jsonResponse(statusCode: number, data: unknown): {
+export function jsonResponse(
+  statusCode: number,
+  data: unknown,
+): {
   statusCode: number;
   headers: Record<string, string>;
   body: string;

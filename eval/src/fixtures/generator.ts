@@ -29,7 +29,14 @@ export function buildTarball(files: Record<string, string>): Buffer {
     writeString(header, '0000000\0', 108, 8);
     writeString(header, '0000000\0', 116, 8);
     writeString(header, body.length.toString(8).padStart(11, '0') + '\0', 124, 12);
-    writeString(header, Math.floor(Date.now() / 1000).toString(8).padStart(11, '0') + '\0', 136, 12);
+    writeString(
+      header,
+      Math.floor(Date.now() / 1000)
+        .toString(8)
+        .padStart(11, '0') + '\0',
+      136,
+      12,
+    );
     header.fill(0x20, 148, 156); // checksum placeholder (spaces)
     header.write('0', 156, 'ascii'); // typeflag: regular file
     writeString(header, 'ustar\0', 257, 6);
@@ -434,7 +441,12 @@ export function generateAllFixtures(privateKeyPem: string): Record<string, Prepa
   };
   const nativeTarball = buildTarball(benignNativeFiles);
   const nativeIntegrity = computeSha512Integrity(nativeTarball);
-  const nativeSig = signMetadata('benign-native-postinstall', '1.0.0', nativeIntegrity, privateKeyPem);
+  const nativeSig = signMetadata(
+    'benign-native-postinstall',
+    '1.0.0',
+    nativeIntegrity,
+    privateKeyPem,
+  );
   fixtures['benign-native-postinstall@1.0.0'] = {
     name: 'benign-native-postinstall',
     version: '1.0.0',
@@ -458,7 +470,8 @@ export function generateAllFixtures(privateKeyPem: string): Record<string, Prepa
           dist: {
             integrity: nativeIntegrity,
             signatures: [nativeSig],
-            tarball: 'http://127.0.0.1:4000/benign-native-postinstall/-/benign-native-postinstall-1.0.0.tgz',
+            tarball:
+              'http://127.0.0.1:4000/benign-native-postinstall/-/benign-native-postinstall-1.0.0.tgz',
           },
         },
       },

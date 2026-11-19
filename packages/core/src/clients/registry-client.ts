@@ -39,7 +39,9 @@ export class RegistryClient {
     const url = `${this.baseUrl.replace(/\/$/, '')}/${encodedName}`;
     const res = await fetch(url);
     if (!res.ok) {
-      throw new Error(`Failed to fetch package metadata from registry: ${res.status} ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch package metadata from registry: ${res.status} ${res.statusText}`,
+      );
     }
     return (await res.json()) as RegistryPackageDocument;
   }

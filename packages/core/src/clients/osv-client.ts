@@ -73,7 +73,11 @@ export function normalizeOsvSeverity(vuln: OsvVulnerability): Severity {
 export class OsvClient {
   constructor(private readonly baseUrl: string = 'https://api.osv.dev/v1') {}
 
-  async queryPackage(name: string, version: string, ecosystem = 'npm'): Promise<OsvVulnerability[]> {
+  async queryPackage(
+    name: string,
+    version: string,
+    ecosystem = 'npm',
+  ): Promise<OsvVulnerability[]> {
     const url = `${this.baseUrl.replace(/\/$/, '')}/query`;
     const res = await fetch(url, {
       method: 'POST',

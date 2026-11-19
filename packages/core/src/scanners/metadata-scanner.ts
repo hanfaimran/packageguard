@@ -1,5 +1,8 @@
 import type { Scanner, ScanContext, Evidence } from '../types.js';
-import type { RegistryPackageDocument, RegistryPackageVersion } from '../clients/registry-client.js';
+import type {
+  RegistryPackageDocument,
+  RegistryPackageVersion,
+} from '../clients/registry-client.js';
 
 export class MetadataScanner implements Scanner {
   readonly name = 'MetadataScanner';

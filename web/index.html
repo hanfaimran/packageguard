@@ -1,461 +1,652 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PackageGuard - Supply Chain Security Scanner</title>
-  <!-- Optional runtime config. Set via window.PG_CONFIG = { API_URL: '...', API_KEY: '...' }; -->
-  <script src="config.js" onerror="window.__CONFIG_LOAD_FAILED = true;"></script>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <div class="container">
-    <header>
-      <div>
-        <h1>PackageGuard</h1>
-        <div class="subtitle">Real-Time Autonomous Software Supply Chain Security Scanner</div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PackageGuard - Supply Chain Security Scanner</title>
+    <!-- Optional runtime config. Set via window.PG_CONFIG = { API_URL: '...', API_KEY: '...' }; -->
+    <script src="config.js" onerror="window.__CONFIG_LOAD_FAILED = true"></script>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div>
+          <h1>PackageGuard</h1>
+          <div class="subtitle">Real-Time Autonomous Software Supply Chain Security Scanner</div>
+        </div>
+        <div>
+          <span class="code-inline">CloudFront &bull; AWS Production Dashboard</span>
+        </div>
+      </header>
+
+      <!-- Missing Config Warning (if config.js is missing or invalid) -->
+      <div id="configErrorBanner" class="error-msg" style="display: none; margin-bottom: 1.5rem">
+        <strong>Configuration Error:</strong> <span class="code-inline">config.js</span> is missing
+        or invalid. Please ensure
+        <span class="code-inline">window.PG_CONFIG = { API_URL: '...', API_KEY: '...' }</span> is
+        configured.
       </div>
-      <div>
-        <span class="code-inline">CloudFront &bull; AWS Production Dashboard</span>
+
+      <!-- Navigation Tab Bar -->
+      <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="scan" onclick="switchTab('scan')">Scan</button>
+        <button class="tab-btn" data-tab="detect" onclick="switchTab('detect')">
+          What We Detect
+        </button>
+        <button class="tab-btn" data-tab="status" onclick="switchTab('status')">
+          Project Status
+        </button>
+        <button class="tab-btn" data-tab="results" onclick="switchTab('results')">
+          Measured Results
+        </button>
+        <button class="tab-btn" data-tab="architecture" onclick="switchTab('architecture')">
+          Cloud Architecture
+        </button>
+      </nav>
+
+      <!-- Tab 1: Scan -->
+      <div id="tab-scan" class="tab-pane active">
+        <section class="card">
+          <h2>Scan Package</h2>
+          <form
+            id="scanForm"
+            onsubmit="
+              event.preventDefault();
+              triggerScan();
+            "
+          >
+            <div class="form-group">
+              <input
+                type="text"
+                id="pkgInput"
+                placeholder="Package name (e.g. lodash)"
+                required
+                autocomplete="off"
+              />
+              <input
+                type="text"
+                id="verInput"
+                placeholder="Version (e.g. 4.17.21)"
+                required
+                autocomplete="off"
+              />
+              <button type="submit" id="scanBtn" class="btn-primary">Scan Package</button>
+            </div>
+          </form>
+          <div class="fixtures-container">
+            <div class="fixtures-label">Sample Packages (click to fill and scan):</div>
+            <div id="sampleChips" class="chips">
+              <button type="button" class="chip" onclick="fillAndScan('lodash', '4.17.21')">
+                lodash@4.17.21
+              </button>
+              <button type="button" class="chip" onclick="fillAndScan('express', '4.18.2')">
+                express@4.18.2
+              </button>
+              <button type="button" class="chip" onclick="fillAndScan('chalk', '5.3.0')">
+                chalk@5.3.0
+              </button>
+            </div>
+          </div>
+          <div id="scanStatusMsg" style="display: none" class="info-msg"></div>
+          <div id="errorDisplay" style="display: none" class="error-msg"></div>
+        </section>
+
+        <!-- Verdict Card -->
+        <section id="verdictCard" class="card" style="display: none">
+          <div class="verdict-header">
+            <div style="display: flex; align-items: center; gap: 1rem">
+              <div id="verdictBadge" class="badge-verdict safe">Safe</div>
+              <div>
+                <h2 id="reportTarget" style="margin: 0; font-size: 1.25rem">package@version</h2>
+                <div
+                  id="reportScanId"
+                  style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace"
+                >
+                  Scan ID: -
+                </div>
+                <div id="reportVerification" style="color: var(--text-muted); font-size: 0.85rem">
+                  Verification Status: Verified
+                </div>
+              </div>
+            </div>
+            <div class="metrics-summary">
+              <div class="metric-item">
+                <span class="metric-label">Trust Score</span>
+                <span id="trustScoreVal" class="metric-value">--/100</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Evidence Count</span>
+                <span id="evidenceCountVal" class="metric-value">0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hard blocks if present -->
+          <div id="hardBlocksSection" style="display: none">
+            <div class="section-title" style="color: #f85149; margin-top: 0">
+              Hard Blocks Triggered
+            </div>
+            <ul id="hardBlocksList" class="hard-blocks-list"></ul>
+          </div>
+
+          <!-- Evidence table -->
+          <div class="section-title">Evidence &amp; Findings</div>
+          <div style="overflow-x: auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Category</th>
+                  <th>Severity</th>
+                  <th>Confidence</th>
+                  <th>Scanner</th>
+                  <th>Location</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody id="evidenceTableBody">
+                <tr>
+                  <td colspan="7" style="text-align: center; color: var(--text-muted)">
+                    No evidence recorded.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="evidenceToggleContainer" style="display: none; text-align: center">
+            <button
+              type="button"
+              id="evidenceToggleBtn"
+              class="btn-secondary"
+              onclick="toggleAllEvidence()"
+            >
+              Show all
+            </button>
+          </div>
+
+          <!-- Remediation -->
+          <div class="section-title">Remediation Steps</div>
+          <ul id="remediationList" class="remediation-box">
+            <li>No remediation steps required. Package is healthy.</li>
+          </ul>
+        </section>
+
+        <!-- Package History Card -->
+        <section id="historyCard" class="card" style="display: none">
+          <h2>Package Scan History</h2>
+          <div style="overflow-x: auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date / Time</th>
+                  <th>Scan ID</th>
+                  <th>Version</th>
+                  <th>Trust Score</th>
+                  <th>Verdict</th>
+                  <th>Verification</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted)">
+                    No past scans recorded for this package.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
-    </header>
 
-    <!-- Missing Config Warning (if config.js is missing or invalid) -->
-    <div id="configErrorBanner" class="error-msg" style="display: none; margin-bottom: 1.5rem;">
-      <strong>Configuration Error:</strong> <span class="code-inline">config.js</span> is missing or invalid. Please ensure <span class="code-inline">window.PG_CONFIG = { API_URL: '...', API_KEY: '...' }</span> is configured.
+      <!-- Tab 2: Project Status -->
+      <div id="tab-status" class="tab-pane">
+        <section class="card">
+          <h2>Project Status &amp; Deliverables</h2>
+
+          <div class="progress-wrapper">
+            <div class="progress-meta">
+              <span><strong>Implementation Progress:</strong> 7 of 8 components completed</span>
+              <span style="font-weight: 600; color: #3fb950">88%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: 87.5%"></div>
+            </div>
+          </div>
+
+          <ul class="status-list">
+            <li class="status-item is-done">
+              <span class="check-icon">&#10004;</span>
+              <div>
+                <strong>Core Supply Chain Scanner</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  Metadata analysis, cryptographic integrity verification, OSV vulnerability
+                  detection, static AST &amp; entropy analyzer, typosquat distance calculations, and
+                  cross-version behavioral diffing.
+                </div>
+              </div>
+            </li>
+            <li class="status-item is-done">
+              <span class="check-icon">&#10004;</span>
+              <div>
+                <strong>Risk Engine &amp; Policy Verdicts</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  Normalized 0-100 trust scoring, weighted deductions, deduplication, hard block
+                  enforcement, and customizable guard policies.
+                </div>
+              </div>
+            </li>
+            <li class="status-item is-done">
+              <span class="check-icon">&#10004;</span>
+              <div>
+                <strong>Serverless Lambda API Handlers</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  Dedicated TypeScript Lambda functions: scan dispatch, asynchronous report
+                  retrieval, service health check, and event dead-letter/SNS notifier.
+                </div>
+              </div>
+            </li>
+            <li class="status-item is-done">
+              <span class="check-icon">&#10004;</span>
+              <div>
+                <strong>Terraform Infrastructure as Code</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  Modular AWS configuration provisioning API Gateway, Lambdas, DynamoDB, S3, KMS
+                  keys, SNS alerting, EventBridge rules, and CloudFront web hosting.
+                </div>
+              </div>
+            </li>
+            <li class="status-item is-done">
+              <span class="check-icon">&#10004;</span>
+              <div>
+                <strong>OpenAPI &amp; System Documentation</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  Complete OpenAPI 3.0.3 specification, threat models, architectural overview, and
+                  cloud infrastructure operations manual.
+                </div>
+              </div>
+            </li>
+            <li class="status-item is-done">
+              <span class="check-icon">&#10004;</span>
+              <div>
+                <strong>Automated Test Suite</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  71 unit and integration tests verifying parsers, scanners, risk heuristics, policy
+                  evaluation, and end-to-end registry flows.
+                </div>
+              </div>
+            </li>
+            <li class="status-item is-done">
+              <span class="check-icon">&#10004;</span>
+              <div>
+                <strong>Hosted Web Dashboard</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  Static web dashboard deployed globally on AWS CloudFront with S3 origin access
+                  control (OAC) and API Gateway integration.
+                </div>
+              </div>
+            </li>
+            <li class="status-item is-pending">
+              <span class="pending-icon">&#9679;</span>
+              <div>
+                <strong>Command Line Interface (CLI)</strong>
+                <div style="color: var(--text-muted); font-size: 0.85rem">
+                  Developer terminal tool for pre-install npm/yarn/pnpm intercept and CI pipeline
+                  integration.
+                </div>
+              </div>
+            </li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- Tab 3: Measured Results -->
+      <div id="tab-results" class="tab-pane">
+        <section class="card">
+          <h2>Measured Evaluation Results</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem">
+            Empirical evaluation results produced by running the automated test suite and the
+            ground-truth benchmark suite against real-world attack vectors, tamper scenarios, and
+            benign packages:
+          </p>
+
+          <div class="stat-cards-grid">
+            <div class="stat-card">
+              <div class="stat-card-label">Automated Tests</div>
+              <div class="stat-card-val val-success">71 / 71</div>
+              <div class="stat-card-desc">100% test pass rate across all test suites</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-label">Benchmark Packages</div>
+              <div class="stat-card-val val-accent">8</div>
+              <div class="stat-card-desc">Comprehensive ground-truth evaluation set</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-label">Detection Precision</div>
+              <div class="stat-card-val val-success">1.00</div>
+              <div class="stat-card-desc">Perfect true positive ratio (3 / 3 true positives)</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-label">Detection Recall</div>
+              <div class="stat-card-val val-success">1.00</div>
+              <div class="stat-card-desc">Zero missed supply chain threats (3 / 3 detected)</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-label">False Positives</div>
+              <div class="stat-card-val val-success">0</div>
+              <div class="stat-card-desc">
+                0.0% false positive rate (5 / 5 benign packages passed)
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-card-label">F1-Score</div>
+              <div class="stat-card-val val-success">1.00</div>
+              <div class="stat-card-desc">Harmonic mean of precision and recall</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Tab: What We Detect -->
+      <div id="tab-detect" class="tab-pane">
+        <section class="card">
+          <h2>What PackageGuard Detects</h2>
+          <p class="detect-intro">
+            Every scan runs the checks below. Each finding becomes evidence, and one scoring engine
+            turns the evidence into a risk score and a Safe / Review / Block verdict.
+          </p>
+        </section>
+
+        <section class="card detect-group">
+          <h3>1. Integrity and authenticity</h3>
+          <ul class="detect-list">
+            <li>
+              <strong>Tampered package</strong
+              ><span
+                >Recomputes the SHA-512 hash of the downloaded tarball and compares it with the
+                registry's integrity value. A mismatch is a hard block.</span
+              >
+            </li>
+            <li>
+              <strong>Signature verification</strong
+              ><span
+                >Checks the registry signature against a public key. Result is Verified,
+                PartiallyVerified (trusted keys not configured) or Unverified.</span
+              >
+            </li>
+          </ul>
+        </section>
+
+        <section class="card detect-group">
+          <h3>2. Known vulnerabilities</h3>
+          <ul class="detect-list">
+            <li>
+              <strong>OSV advisories</strong
+              ><span
+                >Looks up the exact package version in the OSV database and reports advisory IDs,
+                descriptions and severity.</span
+              >
+            </li>
+          </ul>
+        </section>
+
+        <section class="card detect-group">
+          <h3>3. Suspicious code (static analysis)</h3>
+          <ul class="detect-list">
+            <li>
+              <strong>Command execution</strong
+              ><span><code>child_process</code> calls on the real module.</span>
+            </li>
+            <li>
+              <strong>Dynamic code</strong
+              ><span><code>eval()</code> and the <code>Function</code> constructor.</span>
+            </li>
+            <li>
+              <strong>Environment access</strong
+              ><span><code>process.env</code> reads that could expose secrets.</span>
+            </li>
+            <li>
+              <strong>Credential paths</strong
+              ><span>Access to files such as SSH keys or cloud credentials.</span>
+            </li>
+            <li><strong>Outbound network</strong><span>Hardcoded URLs and IP addresses.</span></li>
+            <li>
+              <strong>Obfuscation</strong
+              ><span>Large base64 blobs, hex blobs and high-entropy strings.</span>
+            </li>
+            <li>
+              <strong>Dangerous install scripts</strong
+              ><span
+                ><code>curl | sh</code> and <code>node -e</code> inside lifecycle scripts.</span
+              >
+            </li>
+            <li>
+              <strong>Correlated exfiltration</strong
+              ><span
+                >Environment or credential access combined with obfuscation or eval and a network
+                call in the same file. This is rated higher than any single signal.</span
+              >
+            </li>
+          </ul>
+        </section>
+
+        <section class="card detect-group">
+          <h3>4. Typosquatting</h3>
+          <ul class="detect-list">
+            <li>
+              <strong>Look-alike names</strong
+              ><span
+                >Compares the package name with a versioned list of popular packages using
+                Levenshtein distance (for example <code>loadsh</code> vs <code>lodash</code>).</span
+              >
+            </li>
+          </ul>
+        </section>
+
+        <section class="card detect-group">
+          <h3>5. Version-diff analysis</h3>
+          <ul class="detect-list">
+            <li>
+              <strong>Publisher or maintainer change</strong
+              ><span
+                >A different publisher, or a new maintainer, compared with the previous
+                version.</span
+              >
+            </li>
+            <li>
+              <strong>Install script added or changed</strong
+              ><span
+                >Lifecycle scripts that did not exist, or were modified, since the last
+                release.</span
+              >
+            </li>
+            <li>
+              <strong>New dependencies</strong><span>Dependencies introduced in this release.</span>
+            </li>
+            <li>
+              <strong>Size jump</strong
+              ><span>Package more than 3x larger than the previous version.</span>
+            </li>
+            <li>
+              <strong>New risky code</strong
+              ><span>Static-analysis findings that were not present in the previous version.</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="card detect-group">
+          <h3>6. Metadata warning signs</h3>
+          <ul class="detect-list">
+            <li>
+              <strong>Very new release</strong><span>Version published less than 30 days ago.</span>
+            </li>
+            <li>
+              <strong>No source repository</strong
+              ><span>No linked repository in the registry metadata.</span>
+            </li>
+            <li>
+              <strong>Install scripts present</strong
+              ><span>preinstall, install or postinstall scripts.</span>
+            </li>
+            <li>
+              <strong>Single maintainer</strong><span>Only one account controls the package.</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="card detect-group">
+          <h3>7. Policy rules</h3>
+          <ul class="detect-list">
+            <li>
+              <strong>Minimum verification status</strong
+              ><span>Block packages below the verification level your policy requires.</span>
+            </li>
+            <li>
+              <strong>No install scripts</strong
+              ><span>Block any package with install scripts in strict environments.</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="card limits-box">
+          <h3>What it cannot catch</h3>
+          <ul class="detect-list">
+            <li><span>Unknown (zero-day) vulnerabilities that are not in OSV yet.</span></li>
+            <li>
+              <span
+                >Malicious code that avoids every static pattern. Findings are rule-based
+                indicators, not proof of malice.</span
+              >
+            </li>
+            <li><span>Packages outside the npm ecosystem.</span></li>
+            <li>
+              <span
+                >Code that only misbehaves when it runs. PackageGuard never executes packages.</span
+              >
+            </li>
+          </ul>
+        </section>
+      </div>
+      <!-- Tab 4: Cloud Architecture -->
+      <div id="tab-architecture" class="tab-pane">
+        <section class="card">
+          <h2>Cloud Architecture</h2>
+          <p style="font-size: 0.9rem; color: var(--text-muted)">
+            Serverless, resilient AWS cloud infrastructure provisioned and managed via validated
+            Terraform modules:
+          </p>
+
+          <!-- CSS Box Diagram -->
+          <div class="arch-container">
+            <!-- Edge / Client Flow -->
+            <div class="arch-flow-row">
+              <div class="arch-box" style="border-color: #58a6ff">
+                <div class="arch-box-title">Client</div>
+                <div class="arch-box-sub">CLI / Web Browser / CI</div>
+              </div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box" style="border-color: #79c0ff">
+                <div class="arch-box-title">CloudFront + S3</div>
+                <div class="arch-box-sub">Global CDN &bull; OAC Secured</div>
+              </div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box" style="border-color: #e3b341">
+                <div class="arch-box-title">API Gateway</div>
+                <div class="arch-box-sub">API Key &bull; CORS &bull; Rate Limits</div>
+              </div>
+              <div class="arch-arrow">&rarr;</div>
+              <div class="arch-box">
+                <div class="arch-box-title">EventBridge</div>
+                <div class="arch-box-sub">Nightly Rescan Schedule</div>
+              </div>
+            </div>
+
+            <!-- Lambdas Layer -->
+            <div class="arch-lambdas-group">
+              <div class="arch-group-title">AWS Lambda Compute (4 Dedicated Micro-Functions)</div>
+              <div class="arch-lambdas-grid">
+                <div class="arch-box">
+                  <div class="arch-box-title">1. Scan Handler</div>
+                  <div class="arch-box-sub">Synchronous &amp; async dispatch</div>
+                </div>
+                <div class="arch-box">
+                  <div class="arch-box-title">2. Report Handler</div>
+                  <div class="arch-box-sub">Scan lookup &amp; query</div>
+                </div>
+                <div class="arch-box">
+                  <div class="arch-box-title">3. Health Handler</div>
+                  <div class="arch-box-sub">Service liveness &amp; checks</div>
+                </div>
+                <div class="arch-box">
+                  <div class="arch-box-title">4. Event Handler</div>
+                  <div class="arch-box-sub">Nightly audit &amp; alerts</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Storage and Observability Services -->
+            <div class="arch-flow-row">
+              <div class="arch-services-grid">
+                <div class="arch-box">
+                  <div class="arch-box-title">DynamoDB</div>
+                  <div class="arch-box-sub">Scans table with TTL &amp; PITR</div>
+                </div>
+                <div class="arch-box">
+                  <div class="arch-box-title">Amazon S3</div>
+                  <div class="arch-box-sub">Private bucket with SSE-KMS</div>
+                </div>
+                <div class="arch-box">
+                  <div class="arch-box-title">AWS KMS</div>
+                  <div class="arch-box-sub">Customer-managed keys</div>
+                </div>
+                <div class="arch-box">
+                  <div class="arch-box-title">Amazon SNS</div>
+                  <div class="arch-box-sub">Security alert topic</div>
+                </div>
+                <div class="arch-box">
+                  <div class="arch-box-title">CloudWatch</div>
+                  <div class="arch-box-sub">Metrics, logs &amp; alarms</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Built-In Security Controls</div>
+          <ul class="security-controls-list">
+            <li class="security-control-item">
+              <strong>KMS Encryption</strong>
+              Envelope encryption with customer-managed keys for DynamoDB data at rest, S3
+              artifacts, and SNS topics.
+            </li>
+            <li class="security-control-item">
+              <strong>Least-Privilege IAM</strong>
+              Strict per-Lambda IAM roles with tightly scoped resource ARNs and minimal permission
+              boundaries.
+            </li>
+            <li class="security-control-item">
+              <strong>API Key &amp; Rate Limits</strong>
+              API Gateway usage plans, quota limits, and API key authentication preventing
+              denial-of-service.
+            </li>
+            <li class="security-control-item">
+              <strong>Private S3 Bucket</strong>
+              Public access block enabled, bucket policy enforcement, and encrypted tarball caching.
+            </li>
+            <li class="security-control-item">
+              <strong>Point-in-Time Recovery</strong>
+              DynamoDB continuous backups (PITR) enabled for data protection and audit record
+              compliance.
+            </li>
+          </ul>
+        </section>
+      </div>
     </div>
 
-    <!-- Navigation Tab Bar -->
-    <nav class="tab-bar">
-      <button class="tab-btn active" data-tab="scan" onclick="switchTab('scan')">Scan</button>
-      <button class="tab-btn" data-tab="detect" onclick="switchTab('detect')">What We Detect</button>
-      <button class="tab-btn" data-tab="status" onclick="switchTab('status')">Project Status</button>
-      <button class="tab-btn" data-tab="results" onclick="switchTab('results')">Measured Results</button>
-      <button class="tab-btn" data-tab="architecture" onclick="switchTab('architecture')">Cloud Architecture</button>
-    </nav>
-
-    <!-- Tab 1: Scan -->
-    <div id="tab-scan" class="tab-pane active">
-      <section class="card">
-        <h2>Scan Package</h2>
-        <form id="scanForm" onsubmit="event.preventDefault(); triggerScan();">
-          <div class="form-group">
-            <input type="text" id="pkgInput" placeholder="Package name (e.g. lodash)" required autocomplete="off">
-            <input type="text" id="verInput" placeholder="Version (e.g. 4.17.21)" required autocomplete="off">
-            <button type="submit" id="scanBtn" class="btn-primary">Scan Package</button>
-          </div>
-        </form>
-        <div class="fixtures-container">
-          <div class="fixtures-label">Sample Packages (click to fill and scan):</div>
-          <div id="sampleChips" class="chips">
-            <button type="button" class="chip" onclick="fillAndScan('lodash', '4.17.21')">lodash@4.17.21</button>
-            <button type="button" class="chip" onclick="fillAndScan('express', '4.18.2')">express@4.18.2</button>
-            <button type="button" class="chip" onclick="fillAndScan('chalk', '5.3.0')">chalk@5.3.0</button>
-          </div>
-        </div>
-        <div id="scanStatusMsg" style="display: none;" class="info-msg"></div>
-        <div id="errorDisplay" style="display: none;" class="error-msg"></div>
-      </section>
-
-      <!-- Verdict Card -->
-      <section id="verdictCard" class="card" style="display: none;">
-        <div class="verdict-header">
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div id="verdictBadge" class="badge-verdict safe">Safe</div>
-            <div>
-              <h2 id="reportTarget" style="margin: 0; font-size: 1.25rem;">package@version</h2>
-              <div id="reportScanId" style="color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">Scan ID: -</div>
-              <div id="reportVerification" style="color: var(--text-muted); font-size: 0.85rem;">Verification Status: Verified</div>
-            </div>
-          </div>
-          <div class="metrics-summary">
-            <div class="metric-item">
-              <span class="metric-label">Trust Score</span>
-              <span id="trustScoreVal" class="metric-value">--/100</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-label">Evidence Count</span>
-              <span id="evidenceCountVal" class="metric-value">0</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Hard blocks if present -->
-        <div id="hardBlocksSection" style="display: none;">
-          <div class="section-title" style="color: #f85149; margin-top: 0;">Hard Blocks Triggered</div>
-          <ul id="hardBlocksList" class="hard-blocks-list"></ul>
-        </div>
-
-        <!-- Evidence table -->
-        <div class="section-title">Evidence &amp; Findings</div>
-        <div style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Category</th>
-                <th>Severity</th>
-                <th>Confidence</th>
-                <th>Scanner</th>
-                <th>Location</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody id="evidenceTableBody">
-              <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No evidence recorded.</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="evidenceToggleContainer" style="display: none; text-align: center;">
-          <button type="button" id="evidenceToggleBtn" class="btn-secondary" onclick="toggleAllEvidence()">Show all</button>
-        </div>
-
-        <!-- Remediation -->
-        <div class="section-title">Remediation Steps</div>
-        <ul id="remediationList" class="remediation-box">
-          <li>No remediation steps required. Package is healthy.</li>
-        </ul>
-      </section>
-
-      <!-- Package History Card -->
-      <section id="historyCard" class="card" style="display: none;">
-        <h2>Package Scan History</h2>
-        <div style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Date / Time</th>
-                <th>Scan ID</th>
-                <th>Version</th>
-                <th>Trust Score</th>
-                <th>Verdict</th>
-                <th>Verification</th>
-              </tr>
-            </thead>
-            <tbody id="historyTableBody">
-              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">No past scans recorded for this package.</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
-
-    <!-- Tab 2: Project Status -->
-    <div id="tab-status" class="tab-pane">
-      <section class="card">
-        <h2>Project Status &amp; Deliverables</h2>
-        
-        <div class="progress-wrapper">
-          <div class="progress-meta">
-            <span><strong>Implementation Progress:</strong> 7 of 8 components completed</span>
-            <span style="font-weight: 600; color: #3fb950;">88%</span>
-          </div>
-          <div class="progress-bar-bg">
-            <div class="progress-bar-fill" style="width: 87.5%;"></div>
-          </div>
-        </div>
-
-        <ul class="status-list">
-          <li class="status-item is-done">
-            <span class="check-icon">&#10004;</span>
-            <div>
-              <strong>Core Supply Chain Scanner</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">Metadata analysis, cryptographic integrity verification, OSV vulnerability detection, static AST &amp; entropy analyzer, typosquat distance calculations, and cross-version behavioral diffing.</div>
-            </div>
-          </li>
-          <li class="status-item is-done">
-            <span class="check-icon">&#10004;</span>
-            <div>
-              <strong>Risk Engine &amp; Policy Verdicts</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">Normalized 0-100 trust scoring, weighted deductions, deduplication, hard block enforcement, and customizable guard policies.</div>
-            </div>
-          </li>
-          <li class="status-item is-done">
-            <span class="check-icon">&#10004;</span>
-            <div>
-              <strong>Serverless Lambda API Handlers</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">Dedicated TypeScript Lambda functions: scan dispatch, asynchronous report retrieval, service health check, and event dead-letter/SNS notifier.</div>
-            </div>
-          </li>
-          <li class="status-item is-done">
-            <span class="check-icon">&#10004;</span>
-            <div>
-              <strong>Terraform Infrastructure as Code</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">Modular AWS configuration provisioning API Gateway, Lambdas, DynamoDB, S3, KMS keys, SNS alerting, EventBridge rules, and CloudFront web hosting.</div>
-            </div>
-          </li>
-          <li class="status-item is-done">
-            <span class="check-icon">&#10004;</span>
-            <div>
-              <strong>OpenAPI &amp; System Documentation</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">Complete OpenAPI 3.0.3 specification, threat models, architectural overview, and cloud infrastructure operations manual.</div>
-            </div>
-          </li>
-          <li class="status-item is-done">
-            <span class="check-icon">&#10004;</span>
-            <div>
-              <strong>Automated Test Suite</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">71 unit and integration tests verifying parsers, scanners, risk heuristics, policy evaluation, and end-to-end registry flows.</div>
-            </div>
-          </li>
-          <li class="status-item is-done">
-            <span class="check-icon">&#10004;</span>
-            <div>
-              <strong>Hosted Web Dashboard</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">Static web dashboard deployed globally on AWS CloudFront with S3 origin access control (OAC) and API Gateway integration.</div>
-            </div>
-          </li>
-          <li class="status-item is-pending">
-            <span class="pending-icon">&#9679;</span>
-            <div>
-              <strong>Command Line Interface (CLI)</strong>
-              <div style="color: var(--text-muted); font-size: 0.85rem;">Developer terminal tool for pre-install npm/yarn/pnpm intercept and CI pipeline integration.</div>
-            </div>
-          </li>
-        </ul>
-      </section>
-    </div>
-
-    <!-- Tab 3: Measured Results -->
-    <div id="tab-results" class="tab-pane">
-      <section class="card">
-        <h2>Measured Evaluation Results</h2>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">
-          Empirical evaluation results produced by running the automated test suite and the ground-truth benchmark suite against real-world attack vectors, tamper scenarios, and benign packages:
-        </p>
-
-        <div class="stat-cards-grid">
-          <div class="stat-card">
-            <div class="stat-card-label">Automated Tests</div>
-            <div class="stat-card-val val-success">71 / 71</div>
-            <div class="stat-card-desc">100% test pass rate across all test suites</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-label">Benchmark Packages</div>
-            <div class="stat-card-val val-accent">8</div>
-            <div class="stat-card-desc">Comprehensive ground-truth evaluation set</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-label">Detection Precision</div>
-            <div class="stat-card-val val-success">1.00</div>
-            <div class="stat-card-desc">Perfect true positive ratio (3 / 3 true positives)</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-label">Detection Recall</div>
-            <div class="stat-card-val val-success">1.00</div>
-            <div class="stat-card-desc">Zero missed supply chain threats (3 / 3 detected)</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-label">False Positives</div>
-            <div class="stat-card-val val-success">0</div>
-            <div class="stat-card-desc">0.0% false positive rate (5 / 5 benign packages passed)</div>
-          </div>
-
-          <div class="stat-card">
-            <div class="stat-card-label">F1-Score</div>
-            <div class="stat-card-val val-success">1.00</div>
-            <div class="stat-card-desc">Harmonic mean of precision and recall</div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- Tab: What We Detect -->
-    <div id="tab-detect" class="tab-pane">
-      <section class="card">
-        <h2>What PackageGuard Detects</h2>
-        <p class="detect-intro">Every scan runs the checks below. Each finding becomes evidence, and one scoring engine turns the evidence into a risk score and a Safe / Review / Block verdict.</p>
-      </section>
-
-      <section class="card detect-group">
-        <h3>1. Integrity and authenticity</h3>
-        <ul class="detect-list">
-          <li><strong>Tampered package</strong><span>Recomputes the SHA-512 hash of the downloaded tarball and compares it with the registry's integrity value. A mismatch is a hard block.</span></li>
-          <li><strong>Signature verification</strong><span>Checks the registry signature against a public key. Result is Verified, PartiallyVerified (trusted keys not configured) or Unverified.</span></li>
-        </ul>
-      </section>
-
-      <section class="card detect-group">
-        <h3>2. Known vulnerabilities</h3>
-        <ul class="detect-list">
-          <li><strong>OSV advisories</strong><span>Looks up the exact package version in the OSV database and reports advisory IDs, descriptions and severity.</span></li>
-        </ul>
-      </section>
-
-      <section class="card detect-group">
-        <h3>3. Suspicious code (static analysis)</h3>
-        <ul class="detect-list">
-          <li><strong>Command execution</strong><span><code>child_process</code> calls on the real module.</span></li>
-          <li><strong>Dynamic code</strong><span><code>eval()</code> and the <code>Function</code> constructor.</span></li>
-          <li><strong>Environment access</strong><span><code>process.env</code> reads that could expose secrets.</span></li>
-          <li><strong>Credential paths</strong><span>Access to files such as SSH keys or cloud credentials.</span></li>
-          <li><strong>Outbound network</strong><span>Hardcoded URLs and IP addresses.</span></li>
-          <li><strong>Obfuscation</strong><span>Large base64 blobs, hex blobs and high-entropy strings.</span></li>
-          <li><strong>Dangerous install scripts</strong><span><code>curl | sh</code> and <code>node -e</code> inside lifecycle scripts.</span></li>
-          <li><strong>Correlated exfiltration</strong><span>Environment or credential access combined with obfuscation or eval and a network call in the same file. This is rated higher than any single signal.</span></li>
-        </ul>
-      </section>
-
-      <section class="card detect-group">
-        <h3>4. Typosquatting</h3>
-        <ul class="detect-list">
-          <li><strong>Look-alike names</strong><span>Compares the package name with a versioned list of popular packages using Levenshtein distance (for example <code>loadsh</code> vs <code>lodash</code>).</span></li>
-        </ul>
-      </section>
-
-      <section class="card detect-group">
-        <h3>5. Version-diff analysis</h3>
-        <ul class="detect-list">
-          <li><strong>Publisher or maintainer change</strong><span>A different publisher, or a new maintainer, compared with the previous version.</span></li>
-          <li><strong>Install script added or changed</strong><span>Lifecycle scripts that did not exist, or were modified, since the last release.</span></li>
-          <li><strong>New dependencies</strong><span>Dependencies introduced in this release.</span></li>
-          <li><strong>Size jump</strong><span>Package more than 3x larger than the previous version.</span></li>
-          <li><strong>New risky code</strong><span>Static-analysis findings that were not present in the previous version.</span></li>
-        </ul>
-      </section>
-
-      <section class="card detect-group">
-        <h3>6. Metadata warning signs</h3>
-        <ul class="detect-list">
-          <li><strong>Very new release</strong><span>Version published less than 30 days ago.</span></li>
-          <li><strong>No source repository</strong><span>No linked repository in the registry metadata.</span></li>
-          <li><strong>Install scripts present</strong><span>preinstall, install or postinstall scripts.</span></li>
-          <li><strong>Single maintainer</strong><span>Only one account controls the package.</span></li>
-        </ul>
-      </section>
-
-      <section class="card detect-group">
-        <h3>7. Policy rules</h3>
-        <ul class="detect-list">
-          <li><strong>Minimum verification status</strong><span>Block packages below the verification level your policy requires.</span></li>
-          <li><strong>No install scripts</strong><span>Block any package with install scripts in strict environments.</span></li>
-        </ul>
-      </section>
-
-      <section class="card limits-box">
-        <h3>What it cannot catch</h3>
-        <ul class="detect-list">
-          <li><span>Unknown (zero-day) vulnerabilities that are not in OSV yet.</span></li>
-          <li><span>Malicious code that avoids every static pattern. Findings are rule-based indicators, not proof of malice.</span></li>
-          <li><span>Packages outside the npm ecosystem.</span></li>
-          <li><span>Code that only misbehaves when it runs. PackageGuard never executes packages.</span></li>
-        </ul>
-      </section>
-    </div>
-    <!-- Tab 4: Cloud Architecture -->
-    <div id="tab-architecture" class="tab-pane">
-      <section class="card">
-        <h2>Cloud Architecture</h2>
-        <p style="font-size: 0.9rem; color: var(--text-muted);">
-          Serverless, resilient AWS cloud infrastructure provisioned and managed via validated Terraform modules:
-        </p>
-
-        <!-- CSS Box Diagram -->
-        <div class="arch-container">
-          <!-- Edge / Client Flow -->
-          <div class="arch-flow-row">
-            <div class="arch-box" style="border-color: #58a6ff;">
-              <div class="arch-box-title">Client</div>
-              <div class="arch-box-sub">CLI / Web Browser / CI</div>
-            </div>
-            <div class="arch-arrow">&rarr;</div>
-            <div class="arch-box" style="border-color: #79c0ff;">
-              <div class="arch-box-title">CloudFront + S3</div>
-              <div class="arch-box-sub">Global CDN &bull; OAC Secured</div>
-            </div>
-            <div class="arch-arrow">&rarr;</div>
-            <div class="arch-box" style="border-color: #e3b341;">
-              <div class="arch-box-title">API Gateway</div>
-              <div class="arch-box-sub">API Key &bull; CORS &bull; Rate Limits</div>
-            </div>
-            <div class="arch-arrow">&rarr;</div>
-            <div class="arch-box">
-              <div class="arch-box-title">EventBridge</div>
-              <div class="arch-box-sub">Nightly Rescan Schedule</div>
-            </div>
-          </div>
-
-          <!-- Lambdas Layer -->
-          <div class="arch-lambdas-group">
-            <div class="arch-group-title">AWS Lambda Compute (4 Dedicated Micro-Functions)</div>
-            <div class="arch-lambdas-grid">
-              <div class="arch-box">
-                <div class="arch-box-title">1. Scan Handler</div>
-                <div class="arch-box-sub">Synchronous &amp; async dispatch</div>
-              </div>
-              <div class="arch-box">
-                <div class="arch-box-title">2. Report Handler</div>
-                <div class="arch-box-sub">Scan lookup &amp; query</div>
-              </div>
-              <div class="arch-box">
-                <div class="arch-box-title">3. Health Handler</div>
-                <div class="arch-box-sub">Service liveness &amp; checks</div>
-              </div>
-              <div class="arch-box">
-                <div class="arch-box-title">4. Event Handler</div>
-                <div class="arch-box-sub">Nightly audit &amp; alerts</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Storage and Observability Services -->
-          <div class="arch-flow-row">
-            <div class="arch-services-grid">
-              <div class="arch-box">
-                <div class="arch-box-title">DynamoDB</div>
-                <div class="arch-box-sub">Scans table with TTL &amp; PITR</div>
-              </div>
-              <div class="arch-box">
-                <div class="arch-box-title">Amazon S3</div>
-                <div class="arch-box-sub">Private bucket with SSE-KMS</div>
-              </div>
-              <div class="arch-box">
-                <div class="arch-box-title">AWS KMS</div>
-                <div class="arch-box-sub">Customer-managed keys</div>
-              </div>
-              <div class="arch-box">
-                <div class="arch-box-title">Amazon SNS</div>
-                <div class="arch-box-sub">Security alert topic</div>
-              </div>
-              <div class="arch-box">
-                <div class="arch-box-title">CloudWatch</div>
-                <div class="arch-box-sub">Metrics, logs &amp; alarms</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="section-title">Built-In Security Controls</div>
-        <ul class="security-controls-list">
-          <li class="security-control-item">
-            <strong>KMS Encryption</strong>
-            Envelope encryption with customer-managed keys for DynamoDB data at rest, S3 artifacts, and SNS topics.
-          </li>
-          <li class="security-control-item">
-            <strong>Least-Privilege IAM</strong>
-            Strict per-Lambda IAM roles with tightly scoped resource ARNs and minimal permission boundaries.
-          </li>
-          <li class="security-control-item">
-            <strong>API Key &amp; Rate Limits</strong>
-            API Gateway usage plans, quota limits, and API key authentication preventing denial-of-service.
-          </li>
-          <li class="security-control-item">
-            <strong>Private S3 Bucket</strong>
-            Public access block enabled, bucket policy enforcement, and encrypted tarball caching.
-          </li>
-          <li class="security-control-item">
-            <strong>Point-in-Time Recovery</strong>
-            DynamoDB continuous backups (PITR) enabled for data protection and audit record compliance.
-          </li>
-        </ul>
-      </section>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
-</body>
+    <script src="app.js"></script>
+  </body>
 </html>

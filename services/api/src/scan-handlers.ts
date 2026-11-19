@@ -19,9 +19,7 @@ export interface ScanRequestBody {
   registryUrl?: string;
 }
 
-export async function postScanHandler(
-  event: APIGatewayProxyEvent,
-): Promise<APIGatewayProxyResult> {
+export async function postScanHandler(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
   try {
     const sizeCheck = validateBodySize(event.body, 32768);
     if (!sizeCheck.valid) {

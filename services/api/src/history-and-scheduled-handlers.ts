@@ -1,7 +1,12 @@
 import crypto from 'node:crypto';
 import type { APIGatewayProxyEvent, APIGatewayProxyResult, ScheduledEvent } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand, ScanCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  QueryCommand,
+  ScanCommand,
+  PutCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { SNSClient, PublishCommand } from '@aws-sdk/client-sns';
 import { scanFromRegistry, type Report } from '@packageguard/core';
@@ -95,9 +100,7 @@ export interface NightlyRescanResult {
  * Scans packages in the watchlist table.
  * If a previously Safe package becomes Review or Block, publishes an alert to SNS.
  */
-export async function nightlyRescanHandler(
-  _event?: ScheduledEvent,
-): Promise<NightlyRescanResult> {
+export async function nightlyRescanHandler(_event?: ScheduledEvent): Promise<NightlyRescanResult> {
   const result: NightlyRescanResult = {
     rescannedCount: 0,
     alertedCount: 0,

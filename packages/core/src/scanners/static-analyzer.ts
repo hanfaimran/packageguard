@@ -49,7 +49,8 @@ export class StaticAnalyzer implements Scanner {
     const rawSignals: RawSignal[] = [];
 
     // Identify which files/commands are install scripts
-    const versionDoc = (ctx.registryMetadata?.versions as Record<string, any>)?.[ctx.version] ||
+    const versionDoc =
+      (ctx.registryMetadata?.versions as Record<string, any>)?.[ctx.version] ||
       (ctx.registryMetadata as any);
     const scripts = versionDoc?.scripts || {};
     const installScriptCommands: string[] = [];
@@ -134,7 +135,12 @@ export class StaticAnalyzer implements Scanner {
 
         // Outbound URL / IP patterns (e.g. http://exfil.invalid or IP endpoints)
         const urlMatch = line.match(/https?:\/\/[a-zA-Z0-9.\-_]+(?::\d+)?/);
-        if (urlMatch && !isTestFile && !line.includes('schema.org') && !line.includes('github.com')) {
+        if (
+          urlMatch &&
+          !isTestFile &&
+          !line.includes('schema.org') &&
+          !line.includes('github.com')
+        ) {
           rawSignals.push({
             ruleId: 'outbound-url',
             category: 'network',
@@ -212,7 +218,7 @@ export class StaticAnalyzer implements Scanner {
               }
 
               // child_process (exec, execSync, spawn)
-                            // child_process (exec, execSync, spawn) - only when the object really is child_process
+              // child_process (exec, execSync, spawn) - only when the object really is child_process
               if (
                 callee.type === 'MemberExpression' &&
                 callee.property &&
@@ -284,12 +290,14 @@ export class StaticAnalyzer implements Scanner {
     }
 
     for (const [filePath, fileSignals] of byFile.entries()) {
-      const isInstallScript = installScriptFiles.has(filePath) || filePath.startsWith('package.json:scripts');
+      const isInstallScript =
+        installScriptFiles.has(filePath) || filePath.startsWith('package.json:scripts');
       const isTestFile = /(test|spec|\.test\.|\.spec\.|__tests__)/i.test(filePath);
 
       const uniqueCategories = new Set(fileSignals.map((s) => s.category));
       const hasEnv = uniqueCategories.has('env') || uniqueCategories.has('credential');
-      const hasObfuscationOrEval = uniqueCategories.has('obfuscation') || uniqueCategories.has('eval');
+      const hasObfuscationOrEval =
+        uniqueCategories.has('obfuscation') || uniqueCategories.has('eval');
       const hasOutbound = uniqueCategories.has('network');
       const hasExec = uniqueCategories.has('exec');
 
@@ -306,7 +314,10 @@ export class StaticAnalyzer implements Scanner {
           confidence: 0.98,
           description: `Correlated credential exfiltration pattern detected inside lifecycle install script (${filePath}): environment/credential access + obfuscation/execution + outbound network transmission`,
           location: { file: filePath, line: fileSignals[0].line },
-          snippet: fileSignals.map((s) => s.snippet).join(' | ').slice(0, 200),
+          snippet: fileSignals
+            .map((s) => s.snippet)
+            .join(' | ')
+            .slice(0, 200),
           dedupKey: `static:correlated:exfiltration:${filePath}`,
           rawData: { signals: fileSignals, isInstallScript: true },
         });
@@ -319,7 +330,10 @@ export class StaticAnalyzer implements Scanner {
           confidence: 0.85,
           description: `Correlated suspicious data collection pattern in ${filePath}: environment access combined with dynamic code and outbound network connection`,
           location: { file: filePath, line: fileSignals[0].line },
-          snippet: fileSignals.map((s) => s.snippet).join(' | ').slice(0, 200),
+          snippet: fileSignals
+            .map((s) => s.snippet)
+            .join(' | ')
+            .slice(0, 200),
           dedupKey: `static:correlated:exfiltration:${filePath}`,
           rawData: { signals: fileSignals, isInstallScript: false },
         });

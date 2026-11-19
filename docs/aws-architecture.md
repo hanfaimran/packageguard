@@ -120,15 +120,15 @@ flowchart TD
 
 PackageGuard is architected to remain within the AWS Always-Free Tier or cost negligible amounts at low-to-medium volumes:
 
-| Service | Allocation | Estimated Cost |
-|---|---|---|
-| **AWS Lambda** | 1M free requests/month & 3.2M seconds compute | **\$0.00** (within free tier) |
-| **API Gateway** | 1M free calls/month (first 12 mos) then \$1.00 / 1M | **<\$0.50 / month** |
-| **DynamoDB** | On-Demand (pay-per-request). 25 GB free storage. | **<\$0.20 / month** |
-| **S3** | 5 GB standard storage in free tier. | **<\$0.10 / month** |
-| **KMS** | \$1.00 / month for 1 Customer Managed Key | **\$1.00 / month** |
-| **SNS & EventBridge** | 1M free SNS publishes/month, free EventBridge rules | **\$0.00** |
-| **Total Estimated Run Cost** | Idle / Low Usage (< 10,000 scans/month) | **~\$1.50 - \$2.00 / month** |
+| Service                      | Allocation                                          | Estimated Cost                |
+| ---------------------------- | --------------------------------------------------- | ----------------------------- |
+| **AWS Lambda**               | 1M free requests/month & 3.2M seconds compute       | **\$0.00** (within free tier) |
+| **API Gateway**              | 1M free calls/month (first 12 mos) then \$1.00 / 1M | **<\$0.50 / month**           |
+| **DynamoDB**                 | On-Demand (pay-per-request). 25 GB free storage.    | **<\$0.20 / month**           |
+| **S3**                       | 5 GB standard storage in free tier.                 | **<\$0.10 / month**           |
+| **KMS**                      | \$1.00 / month for 1 Customer Managed Key           | **\$1.00 / month**            |
+| **SNS & EventBridge**        | 1M free SNS publishes/month, free EventBridge rules | **\$0.00**                    |
+| **Total Estimated Run Cost** | Idle / Low Usage (< 10,000 scans/month)             | **~\$1.50 - \$2.00 / month**  |
 
 ---
 
@@ -137,12 +137,15 @@ PackageGuard is architected to remain within the AWS Always-Free Tier or cost ne
 Follow these exact steps to build and deploy PackageGuard infrastructure on AWS.
 
 ### Prerequisites
+
 - Node.js 20+ and npm installed
 - AWS CLI configured (`aws configure` with credentials possessing IAM permissions)
 - Terraform CLI >= 1.5.0 installed
 
 ### Step 1: Bundle Lambda Handlers into Zip Files
+
 From the project root:
+
 ```bash
 # Install dependencies across all workspaces
 npm install
@@ -150,31 +153,41 @@ npm install
 # Bundle the four Lambda handlers into infra/build/*.zip
 npm --workspace=services/api run build
 ```
+
 Verify that `infra/build/` contains:
+
 - `post-scan.zip`
 - `get-scan.zip`
 - `get-history.zip`
 - `nightly-rescan.zip`
 
 ### Step 2: Initialize Terraform
+
 Navigate to the `infra/` directory:
+
 ```bash
 cd infra
 terraform init
 ```
 
 ### Step 3: Plan Infrastructure
+
 Review the planned infrastructure:
+
 ```bash
 terraform plan -var="alert_email=secops@yourdomain.com" -out=tfplan
 ```
 
 ### Step 4: Apply Infrastructure
+
 Provision the cloud resources:
+
 ```bash
 terraform apply tfplan
 ```
+
 Once complete, Terraform outputs the API invoke URL and API key ID:
+
 ```text
 Outputs:
 api_invoke_url = "https://a1b2c3d4e5.execute-api.us-east-1.amazonaws.com/v1"
@@ -182,6 +195,7 @@ api_key_id     = "abc123xyz"
 ```
 
 To extract the secret API key value:
+
 ```bash
 terraform output -raw api_key_value
 ```
@@ -189,6 +203,7 @@ terraform output -raw api_key_value
 ### Step 5: Test Endpoints with curl
 
 1. **Trigger a package scan (`POST /scan`)**:
+
    ```bash
    API_URL=$(terraform output -raw api_invoke_url)
    API_KEY=$(terraform output -raw api_key_value)
@@ -198,9 +213,11 @@ terraform output -raw api_key_value
      -H "X-Api-Key: ${API_KEY}" \
      -d '{"package": "lodash", "version": "4.17.21"}'
    ```
-   *Expected response: `201 Created` with `scanId` and `report` JSON.*
+
+   _Expected response: `201 Created` with `scanId` and `report` JSON._
 
 2. **Retrieve scan by ID (`GET /scan/{id}`)**:
+
    ```bash
    curl -X GET "${API_URL}/scan/<scanId-from-above>" \
      -H "X-Api-Key: ${API_KEY}"
@@ -213,7 +230,9 @@ terraform output -raw api_key_value
    ```
 
 ### Step 6: Teardown / Destroy Infrastructure
+
 To remove all provisioned AWS resources and avoid ongoing charges:
+
 ```bash
 terraform destroy -var="alert_email=secops@yourdomain.com"
 ```

@@ -78,7 +78,9 @@ describe('VersionDiffScanner', () => {
 
     const scriptEv = evidence.find((e) => e.dedupKey === 'lifecycle:script:postinstall');
     expect(scriptEv).toBeDefined();
-    expect(scriptEv?.description).toContain('postinstall script added in 1.0.1, absent in previous version');
+    expect(scriptEv?.description).toContain(
+      'postinstall script added in 1.0.1, absent in previous version',
+    );
 
     const maintEv = evidence.find((e) => e.dedupKey.startsWith('version-diff:maintainer:added'));
     expect(maintEv).toBeDefined();
@@ -89,7 +91,9 @@ describe('VersionDiffScanner', () => {
     expect(depEv?.description).toContain('flatmap-stream');
 
     const staticDiffEv = evidence.find(
-      (e) => e.description.includes('scripts/postinstall.js') && e.location?.file === 'scripts/postinstall.js',
+      (e) =>
+        e.description.includes('scripts/postinstall.js') &&
+        e.location?.file === 'scripts/postinstall.js',
     );
     expect(staticDiffEv).toBeDefined();
     expect(staticDiffEv?.location?.line).toBeDefined();
