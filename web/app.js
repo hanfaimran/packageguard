@@ -8,7 +8,7 @@
         .replace(/'/g, '&#039;');
     }
 
-    const VALID_TABS = ['scan', 'status', 'results', 'architecture'];
+    const VALID_TABS = ['scan', 'detect', 'status', 'results', 'architecture'];
 
     function switchTab(tabId) {
       if (!VALID_TABS.includes(tabId)) {
