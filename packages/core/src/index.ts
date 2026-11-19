@@ -235,3 +235,5 @@ export async function scanFromRegistry(
   });
 }
 
+export * from './github/repo-fetch.js';
+export * from './github/repo-url.js';
